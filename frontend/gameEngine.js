@@ -1139,6 +1139,32 @@ function tasIslenebilirMi(tas, kombinasyon, okeyTasi = null) {
 }
 
 /**
+ * Çift açıcıya çift (2 taş) işlenip işlenemeyeceğini kontrol eder.
+ * @param {Object} tas1 - Birinci taş
+ * @param {Object} tas2 - İkinci taş
+ * @param {Array} mevcutKombs - Hedef oyuncunun mevcut acilmisKombs listesi (çiftler)
+ * @returns {{ islenebilir: boolean, yeniKombs: Array|null, sebep: string }}
+ */
+function ciftIslenebilirMi(tas1, tas2, mevcutKombs) {
+  if (!tas1 || !tas2) {
+    return { islenebilir: false, yeniKombs: null, sebep: 'İki taş gerekli.' };
+  }
+  if (tas1.jokerMi || tas2.jokerMi) {
+    return { islenebilir: false, yeniKombs: null, sebep: 'Joker taş çift olarak işlenemez.' };
+  }
+  if (tas1.id === tas2.id) {
+    return { islenebilir: false, yeniKombs: null, sebep: 'Aynı taş iki kez seçilemez.' };
+  }
+  // Çift olabilmesi için: aynı sayı + aynı renk
+  if (tas1.sayi !== tas2.sayi || tas1.renk !== tas2.renk) {
+    return { islenebilir: false, yeniKombs: null, sebep: 'Çift için aynı sayı ve aynı renk gerekli.' };
+  }
+  // Başarılı: yeni çift kombinasyon olarak ekle
+  const yeniKombs = [...(mevcutKombs || []), [tas1, tas2]];
+  return { islenebilir: true, yeniKombs, sebep: 'Çift işlendi.' };
+}
+
+/**
  * 28 slotluk raf düzenindeki geçerli perlerin toplam puanını hesaplar.
  * @param {Array} slotlar - 28 elemanlı dizi (taş veya null)
  * @param {Object} okeyTasi - Okey taşı tanımı
@@ -1342,7 +1368,8 @@ const _exports = {
   tasIslenebilirMi,
   elPuaniniHesapla,
   slotlariGrupla,
-  elAcmaKontrol
+  elAcmaKontrol,
+  ciftIslenebilirMi
 };
 
 if (typeof module !== 'undefined' && module.exports) {

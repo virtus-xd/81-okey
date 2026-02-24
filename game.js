@@ -573,7 +573,7 @@
         if (acmaSonucu) {
             bot.elAcildi = true;
             bot.acilmisKombs = acmaSonucu.kombinasyonlar;
-
+            bot.elAcmaYontemi = acmaSonucu.yontem;
             const acılanIdler = new Set();
             for (const komb of acmaSonucu.kombinasyonlar) {
                 for (const tas of komb) acılanIdler.add(tas.id);
@@ -767,7 +767,7 @@
         if (acmaSonucu) {
             bot.elAcildi = true;
             bot.acilmisKombs = acmaSonucu.kombinasyonlar;
-
+            bot.elAcmaYontemi = acmaSonucu.yontem;
             const acılanIdler = new Set();
             for (const komb of acmaSonucu.kombinasyonlar) {
                 for (const tas of komb) acılanIdler.add(tas.id);
@@ -811,7 +811,7 @@
      * @param {number} hedefOyuncuIndex - Hedef kombinasyonun sahibi oyuncu index'i
      * @param {number} kombIndex - Hedef kombinasyonun index'i
      */
-    function tasIsle(tasIndex, hedefOyuncuIndex, kombIndex) {
+    function tasIsle(tasIndex, hedefOyuncuIndex, kombIndex, ikincitasIndex) {
         const ben = durum.oyuncular[0];
         if (!ben.elAcildi) {
             R.bildirimGoster('Önce elinizi açmanız gerekiyor!', '', 2000);
@@ -819,11 +819,47 @@
         }
         if (durum.faz !== 'atma' || durum.aktifOyuncuIndex !== 0) return;
 
+        const hedefOyuncu = durum.oyuncular[hedefOyuncuIndex];
+        if (!hedefOyuncu || !hedefOyuncu.elAcildi) {
+            R.bildirimGoster('Hedef oyuncu elini açmamış!', '', 2000);
+            return;
+        }
+
+        const hedefYontem = hedefOyuncu.elAcmaYontemi || 'seri';
+
+        // ── ÇİFT AÇICIYA: iki taş gerekli ──
+        if (hedefYontem === 'cift') {
+            if (ikincitasIndex === undefined || ikincitasIndex === null) {
+                R.bildirimGoster('Çift açıcıya işlemek için iki taş seçmelisiniz! (Raftan ikinci taşa da tıklayın)', '', 3000);
+                return;
+            }
+            const buyukIdx = Math.max(tasIndex, ikincitasIndex);
+            const kucukIdx = Math.min(tasIndex, ikincitasIndex);
+            const tas1 = ben.el[kucukIdx];
+            const tas2 = ben.el[buyukIdx];
+            if (!tas1 || !tas2) return;
+
+            const sonuc = GE.ciftIslenebilirMi(tas1, tas2, hedefOyuncu.acilmisKombs);
+            if (sonuc.islenebilir) {
+                ben.el.splice(buyukIdx, 1);
+                ben.el.splice(kucukIdx, 1);
+                ben.kalanTaslar = ben.el;
+                hedefOyuncu.acilmisKombs = sonuc.yeniKombs;
+                Ses.tasCek();
+                R.bildirimGoster('Çift işlendi!', '', 2000);
+                tumEkraniGuncelle();
+                if (ben.el.length === 0) turSonuMu();
+            } else {
+                R.bildirimGoster(sonuc.sebep, '', 2000);
+            }
+            return;
+        }
+
+        // ── SERİ/PER AÇICIYA TEK TAŞ ──
         const tas = ben.el[tasIndex];
         if (!tas) return;
 
-        const hedefOyuncu = durum.oyuncular[hedefOyuncuIndex];
-        if (!hedefOyuncu || !hedefOyuncu.acilmisKombs || !hedefOyuncu.acilmisKombs[kombIndex]) {
+        if (!hedefOyuncu.acilmisKombs || !hedefOyuncu.acilmisKombs[kombIndex]) {
             R.bildirimGoster('Geçersiz hedef kombinasyon!', '', 2000);
             return;
         }
@@ -866,29 +902,48 @@
         while (islemeYapildi) {
             islemeYapildi = false;
 
-            for (let ti = bot.el.length - 1; ti >= 0; ti--) {
-                const tas = bot.el[ti];
+            for (let oi = 0; oi < durum.oyuncular.length; oi++) {
+                const hedefOyuncu = durum.oyuncular[oi];
+                if (!hedefOyuncu.elAcildi || !hedefOyuncu.acilmisKombs) continue;
 
-                // Tüm oyuncuların açılmış kombinasyonlarını kontrol et
-                for (let oi = 0; oi < durum.oyuncular.length; oi++) {
-                    const hedefOyuncu = durum.oyuncular[oi];
-                    if (!hedefOyuncu.acilmisKombs) continue;
+                const hedefYontem = hedefOyuncu.elAcmaYontemi || 'seri';
 
-                    for (let ki = 0; ki < hedefOyuncu.acilmisKombs.length; ki++) {
-                        const sonuc = GE.tasIslenebilirMi(tas, hedefOyuncu.acilmisKombs[ki], durum.okeyTasi);
-                        if (sonuc.islenebilir) {
-                            // Taşı elden çıkar ve kombinasyona ekle
-                            bot.el.splice(ti, 1);
-                            hedefOyuncu.acilmisKombs[ki] = sonuc.yeniKombinasyon;
-                            bot.kalanTaslar = bot.el;
-
-                            R.bildirimGoster(`${bot.isim} taş işledi: ${sonuc.sebep}`, '', 2000);
-                            islemeYapildi = true;
-                            break; // Bu taş için yeniden döngüye gir
+                // ── ÇİFT AÇICIYA: çift bul ve işle ──
+                if (hedefYontem === 'cift') {
+                    for (let i = 0; i < bot.el.length - 1; i++) {
+                        for (let j = i + 1; j < bot.el.length; j++) {
+                            const sonuc = GE.ciftIslenebilirMi(bot.el[i], bot.el[j], hedefOyuncu.acilmisKombs);
+                            if (sonuc.islenebilir) {
+                                bot.el.splice(j, 1);
+                                bot.el.splice(i, 1);
+                                hedefOyuncu.acilmisKombs = sonuc.yeniKombs;
+                                bot.kalanTaslar = bot.el;
+                                R.bildirimGoster(`${bot.isim} çift işledi!`, '', 2000);
+                                islemeYapildi = true;
+                                break;
+                            }
                         }
+                        if (islemeYapildi) break;
                     }
-                    if (islemeYapildi) break;
+                } else {
+                    // ── SERİ/PER AÇICIYA: tek taş işle ──
+                    for (let ti = bot.el.length - 1; ti >= 0; ti--) {
+                        const tas = bot.el[ti];
+                        for (let ki = 0; ki < hedefOyuncu.acilmisKombs.length; ki++) {
+                            const sonuc = GE.tasIslenebilirMi(tas, hedefOyuncu.acilmisKombs[ki], durum.okeyTasi);
+                            if (sonuc.islenebilir) {
+                                bot.el.splice(ti, 1);
+                                hedefOyuncu.acilmisKombs[ki] = sonuc.yeniKombinasyon;
+                                bot.kalanTaslar = bot.el;
+                                R.bildirimGoster(`${bot.isim} taş işledi: ${sonuc.sebep}`, '', 2000);
+                                islemeYapildi = true;
+                                break;
+                            }
+                        }
+                        if (islemeYapildi) break;
+                    }
                 }
+
                 if (islemeYapildi) break;
             }
         }

@@ -1,40 +1,31 @@
 /**
- * 81 Okey — Multiplayer Sunucu (Render.com)
- *
+ * 81 Okey — Multiplayer Sunucu
+ * 
  * Node.js + Express + Socket.IO
- * Sadece backend — statik dosyalar Vercel'de sunulur.
- *
- * Env değişkenleri (Render Dashboard'dan ayarlayın):
- *   PORT        → Render otomatik atar
- *   FRONTEND_URL → Vercel frontend URL'si (CORS için)
- *                  Örn: https://81-okey.vercel.app
+ * 4 kişilik multiplayer oyun sunucusu
  */
 
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const cors = require('cors');
+const path = require('path');
 const GE = require('./gameEngine');
-
-const FRONTEND_URL = process.env.FRONTEND_URL || '*';
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: FRONTEND_URL,
-        methods: ['GET', 'POST']
-    }
+    cors: { origin: '*' }
 });
-
-app.use(cors({ origin: FRONTEND_URL }));
 
 const PORT = process.env.PORT || 3000;
 
-// Sağlık kontrolü
+// Ana sayfa → multiplayer.html (static'ten ÖNCE olmalı!)
 app.get('/', (req, res) => {
-    res.json({ status: 'ok', game: '81 Okey Multiplayer Backend' });
+    res.sendFile(path.join(__dirname, 'multiplayer.html'));
 });
+
+// Statik dosyaları sun
+app.use(express.static(path.join(__dirname)));
 
 // ─── LOBİ ve ODALAR ──────────────────────────────────────
 const odalar = new Map(); // odaId → OdaDurumu
@@ -219,6 +210,7 @@ function oyuncuyaDurumGonder(oyun, oyuncuIndex) {
             tasSayisi: o.el.length,
             elAcildi: o.elAcildi,
             acilmisKombs: o.acilmisKombs,
+            elAcmaYontemi: o.elAcmaYontemi || 'seri',
             puan: o.puan,
             cifteIlanEtti: o.cifteIlanEtti,
             cifteGectiMi: o.cifteGectiMi,
@@ -759,6 +751,7 @@ io.on('connection', (socket) => {
 
         oyuncu.elAcildi = true;
         oyuncu.acilmisKombs = acmaSonucu.kombinasyonlar;
+        oyuncu.elAcmaYontemi = acmaSonucu.yontem; // 'seri' veya 'cift'
 
         // Zorunlu açma yerine getirildi — zamanlayıcıyı durdur
         if (oyun.zorunluAcma[oyuncuIndex]) {
@@ -825,7 +818,9 @@ io.on('connection', (socket) => {
     });
 
     // ═══ TAŞ İŞLE ═══
-    socket.on('tasIsle', ({ tasIndex, hedefOyuncuIndex, kombIndex }) => {
+    // tasIsle: { tasIndex, ikincitasIndex?, hedefOyuncuIndex, kombIndex }
+    // Çift açıcıya işleme: ikincitasIndex gerekli, her ikisi de çift olmalı
+    socket.on('tasIsle', ({ tasIndex, ikincitasIndex, hedefOyuncuIndex, kombIndex }) => {
         const oda = odalar.get(oyuncuOdaId);
         if (!oda || !oda.oyun) return;
         const oyun = oda.oyun;
@@ -843,7 +838,49 @@ io.on('connection', (socket) => {
         if (!tas) return;
 
         const hedefOyuncu = oyun.oyuncular[hedefOyuncuIndex];
-        if (!hedefOyuncu || !hedefOyuncu.acilmisKombs || !hedefOyuncu.acilmisKombs[kombIndex]) {
+        if (!hedefOyuncu || !hedefOyuncu.elAcildi) {
+            socket.emit('bildirim', { mesaj: 'Hedef oyuncu elini açmamış!', tip: '', sure: 2000 });
+            return;
+        }
+
+        const hedefYontem = hedefOyuncu.elAcmaYontemi || 'seri';
+
+        // ── ÇİFT AÇICIYA İŞLEME ──
+        if (hedefYontem === 'cift') {
+            if (ikincitasIndex === undefined || ikincitasIndex === null) {
+                socket.emit('bildirim', { mesaj: 'Çift açıcıya işlemek için iki taş seçmelisiniz!', tip: '', sure: 3000 });
+                return;
+            }
+            // İki indexin farklı olduğunu garantile
+            if (tasIndex === ikincitasIndex) {
+                socket.emit('bildirim', { mesaj: 'İki farklı taş seçmelisiniz!', tip: '', sure: 2000 });
+                return;
+            }
+            // Büyükten küçüğe splice sırası (index kayması önleme)
+            const buyukIdx = Math.max(tasIndex, ikincitasIndex);
+            const kucukIdx = Math.min(tasIndex, ikincitasIndex);
+            const tas2 = oyuncu.el[buyukIdx];
+            const tas1 = oyuncu.el[kucukIdx];
+            if (!tas1 || !tas2) return;
+
+            const sonuc = GE.ciftIslenebilirMi(tas1, tas2, hedefOyuncu.acilmisKombs);
+            if (sonuc.islenebilir) {
+                oyuncu.el.splice(buyukIdx, 1);
+                oyuncu.el.splice(kucukIdx, 1);
+                oyuncu.kalanTaslar = oyuncu.el;
+                hedefOyuncu.acilmisKombs = sonuc.yeniKombs;
+
+                herkeseBildirimGonder(oyuncuOdaId, `${oyuncu.isim} çift işledi!`, '', 2000);
+                herkeseDurumGonder(oyuncuOdaId);
+                if (oyuncu.el.length === 0) turSonuKontrol(oyuncuOdaId);
+            } else {
+                socket.emit('bildirim', { mesaj: sonuc.sebep, tip: '', sure: 2000 });
+            }
+            return;
+        }
+
+        // ── SERİ/PER AÇICIYA TEK TAŞ İŞLEME ──
+        if (!hedefOyuncu.acilmisKombs || !hedefOyuncu.acilmisKombs[kombIndex]) {
             socket.emit('bildirim', { mesaj: 'Geçersiz hedef kombinasyon!', tip: '', sure: 2000 });
             return;
         }
@@ -934,7 +971,6 @@ function izinVerIsle(odaId) {
 
 server.listen(PORT, () => {
     console.log(`\n🎲 81 Okey Multiplayer Sunucu`);
-    console.log(`   Port: ${PORT}`);
-    console.log(`   CORS Origin: ${FRONTEND_URL}`);
+    console.log(`   http://localhost:${PORT}`);
     console.log(`   4 oyuncu bekleniyor...\n`);
 });

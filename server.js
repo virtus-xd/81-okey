@@ -210,6 +210,7 @@ function oyuncuyaDurumGonder(oyun, oyuncuIndex) {
             tasSayisi: o.el.length,
             elAcildi: o.elAcildi,
             acilmisKombs: o.acilmisKombs,
+            elAcmaYontemi: o.elAcmaYontemi || 'seri',
             puan: o.puan,
             cifteIlanEtti: o.cifteIlanEtti,
             cifteGectiMi: o.cifteGectiMi,
@@ -750,6 +751,7 @@ io.on('connection', (socket) => {
 
         oyuncu.elAcildi = true;
         oyuncu.acilmisKombs = acmaSonucu.kombinasyonlar;
+        oyuncu.elAcmaYontemi = acmaSonucu.yontem; // 'seri' veya 'cift'
 
         // Zorunlu açma yerine getirildi — zamanlayıcıyı durdur
         if (oyun.zorunluAcma[oyuncuIndex]) {
@@ -816,7 +818,9 @@ io.on('connection', (socket) => {
     });
 
     // ═══ TAŞ İŞLE ═══
-    socket.on('tasIsle', ({ tasIndex, hedefOyuncuIndex, kombIndex }) => {
+    // tasIsle: { tasIndex, ikincitasIndex?, hedefOyuncuIndex, kombIndex }
+    // Çift açıcıya işleme: ikincitasIndex gerekli, her ikisi de çift olmalı
+    socket.on('tasIsle', ({ tasIndex, ikincitasIndex, hedefOyuncuIndex, kombIndex }) => {
         const oda = odalar.get(oyuncuOdaId);
         if (!oda || !oda.oyun) return;
         const oyun = oda.oyun;
@@ -834,7 +838,49 @@ io.on('connection', (socket) => {
         if (!tas) return;
 
         const hedefOyuncu = oyun.oyuncular[hedefOyuncuIndex];
-        if (!hedefOyuncu || !hedefOyuncu.acilmisKombs || !hedefOyuncu.acilmisKombs[kombIndex]) {
+        if (!hedefOyuncu || !hedefOyuncu.elAcildi) {
+            socket.emit('bildirim', { mesaj: 'Hedef oyuncu elini açmamış!', tip: '', sure: 2000 });
+            return;
+        }
+
+        const hedefYontem = hedefOyuncu.elAcmaYontemi || 'seri';
+
+        // ── ÇİFT AÇICIYA İŞLEME ──
+        if (hedefYontem === 'cift') {
+            if (ikincitasIndex === undefined || ikincitasIndex === null) {
+                socket.emit('bildirim', { mesaj: 'Çift açıcıya işlemek için iki taş seçmelisiniz!', tip: '', sure: 3000 });
+                return;
+            }
+            // İki indexin farklı olduğunu garantile
+            if (tasIndex === ikincitasIndex) {
+                socket.emit('bildirim', { mesaj: 'İki farklı taş seçmelisiniz!', tip: '', sure: 2000 });
+                return;
+            }
+            // Büyükten küçüğe splice sırası (index kayması önleme)
+            const buyukIdx = Math.max(tasIndex, ikincitasIndex);
+            const kucukIdx = Math.min(tasIndex, ikincitasIndex);
+            const tas2 = oyuncu.el[buyukIdx];
+            const tas1 = oyuncu.el[kucukIdx];
+            if (!tas1 || !tas2) return;
+
+            const sonuc = GE.ciftIslenebilirMi(tas1, tas2, hedefOyuncu.acilmisKombs);
+            if (sonuc.islenebilir) {
+                oyuncu.el.splice(buyukIdx, 1);
+                oyuncu.el.splice(kucukIdx, 1);
+                oyuncu.kalanTaslar = oyuncu.el;
+                hedefOyuncu.acilmisKombs = sonuc.yeniKombs;
+
+                herkeseBildirimGonder(oyuncuOdaId, `${oyuncu.isim} çift işledi!`, '', 2000);
+                herkeseDurumGonder(oyuncuOdaId);
+                if (oyuncu.el.length === 0) turSonuKontrol(oyuncuOdaId);
+            } else {
+                socket.emit('bildirim', { mesaj: sonuc.sebep, tip: '', sure: 2000 });
+            }
+            return;
+        }
+
+        // ── SERİ/PER AÇICIYA TEK TAŞ İŞLEME ──
+        if (!hedefOyuncu.acilmisKombs || !hedefOyuncu.acilmisKombs[kombIndex]) {
             socket.emit('bildirim', { mesaj: 'Geçersiz hedef kombinasyon!', tip: '', sure: 2000 });
             return;
         }
