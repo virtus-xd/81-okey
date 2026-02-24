@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="81 Okey — Türkiye'nin klasik kart oyunu. Karaman bölgesine özgü kurallarla web üzerinde oynayın.">
+    <title>81 Okey — Karaman Bölgesi Okey Oyunu</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+</head>
+
+<body>
+
+    <div id="oyun-alani">
+
+        <!-- MASA ALANI -->
+        <div id="masa-container">
+
+            <!-- OYUNCU PANELLERİ -->
+            <div id="oyuncu-kuzey" class="oyuncu-panel">
+                <div class="avatar">K</div>
+                <div class="bilgi">
+                    <span class="isim">Bot-Kuzey</span>
+                    <span class="puan">0 puan</span>
+                    <span class="tas-sayisi">14 taş</span>
+                </div>
+            </div>
+
+            <div id="oyuncu-dogu" class="oyuncu-panel">
+                <div class="avatar">D</div>
+                <div class="bilgi">
+                    <span class="isim">Bot-Doğu</span>
+                    <span class="puan">0 puan</span>
+                    <span class="tas-sayisi">14 taş</span>
+                </div>
+            </div>
+
+            <div id="oyuncu-bati" class="oyuncu-panel">
+                <div class="avatar">B</div>
+                <div class="bilgi">
+                    <span class="isim">Bot-Batı</span>
+                    <span class="puan">0 puan</span>
+                    <span class="tas-sayisi">14 taş</span>
+                </div>
+            </div>
+
+            <div id="oyuncu-guney" class="oyuncu-panel">
+                <div class="avatar" style="background: linear-gradient(135deg, #f0c040, #e67e22);">S</div>
+                <div class="bilgi">
+                    <span class="isim">Sen</span>
+                    <span class="puan">0 puan</span>
+                    <span class="tas-sayisi">14 taş</span>
+                </div>
+            </div>
+
+            <!-- MERKEZ ALAN -->
+            <div id="merkez-alan">
+                <div id="gosterge-alani">
+                    <div class="etiket">GÖSTERGE</div>
+                </div>
+
+                <div id="istaka-yigini" title="Istakadan taş çek">
+                    <div class="istaka-tas"></div>
+                    <div class="istaka-tas"></div>
+                    <div class="istaka-tas"></div>
+                    <div id="istaka-sayi">50</div>
+                </div>
+
+                <div id="atilan-tas-alani">
+                    <div class="etiket">ATILAN</div>
+                </div>
+            </div>
+
+            <!-- AÇILMIŞ KOMBİNASYONLAR -->
+            <div id="acilmis-kuzey" class="acilmis-alan"></div>
+            <div id="acilmis-dogu" class="acilmis-alan"></div>
+            <div id="acilmis-bati" class="acilmis-alan"></div>
+            <div id="acilmis-guney" class="acilmis-alan"></div>
+
+            <!-- OYUNCU ATILAN TAŞ ALANLARI (köşelerde) -->
+            <div id="atilan-kuzey" class="oyuncu-atilan-alan kuzey">
+                <div class="atilan-etiket">Kuzey</div>
+                <div class="atilan-tas-yuvasi"></div>
+            </div>
+            <div id="atilan-dogu" class="oyuncu-atilan-alan dogu">
+                <div class="atilan-etiket">Doğu</div>
+                <div class="atilan-tas-yuvasi"></div>
+            </div>
+            <div id="atilan-bati" class="oyuncu-atilan-alan bati">
+                <div class="atilan-etiket">Batı</div>
+                <div class="atilan-tas-yuvasi"></div>
+            </div>
+            <div id="atilan-guney" class="oyuncu-atilan-alan guney">
+                <div class="atilan-etiket">Sen</div>
+                <div class="atilan-tas-yuvasi"></div>
+            </div>
+
+            <!-- ÇİFTE GÖSTERGESİ -->
+            <div id="cifte-gosterge">⚡ ÇİFTE GİDİLDİ</div>
+
+            <!-- SES BUTONU -->
+            <button id="btn-ses" title="Ses aç/kapat">🔊</button>
+
+            <!-- HUD -->
+            <div id="hud">
+                <div class="hud-kutu">
+                    <div class="baslik">Süre</div>
+                    <div class="deger" id="zamanlayici">30s</div>
+                </div>
+                <div class="hud-kutu">
+                    <div class="baslik">Tur</div>
+                    <div class="deger" id="tur-sayisi">1</div>
+                </div>
+            </div>
+
+            <!-- SKOR PANELİ -->
+            <div id="skor-panel" class="hud-kutu">
+                <div class="baslik">Skor</div>
+                <table id="skor-tablo">
+                    <thead>
+                        <tr>
+                            <th>Oyuncu</th>
+                            <th>Puan</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- OYUNCU ELİ (RAF) — Ahşap İstaka -->
+        <div id="raf-container">
+            <!-- Üst kısım: açılmış taşlar -->
+            <div id="acilmis-raf" style="display:flex;gap:4px;min-height:30px;width:100%;padding:2px 8px;"></div>
+
+            <!-- Ana raf: taşlar + butonlar -->
+            <div style="display:flex;align-items:flex-end;width:100%;gap:6px;">
+                <div id="aksiyon-panel">
+                    <button id="btn-cek" class="aksiyon-btn" title="Istakadan taş çek">📥 Çek</button>
+                    <button id="btn-yandan-al" class="aksiyon-btn" style="display:none;"
+                        title="Yandaki oyuncunun attığı taşı al">↩️ Yandan Al</button>
+                    <button id="btn-at" class="aksiyon-btn tehlike" disabled title="Seçili taşı at">📤 At</button>
+                    <button id="btn-ac" class="aksiyon-btn basari" disabled title="Elini aç">🎴 Aç</button>
+                    <button id="btn-cifte" class="aksiyon-btn cifte" title="Çifte ilan et">⚡ Çifte</button>
+                </div>
+
+                <div class="raf-orta-sutun"
+                    style="flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;">
+                    <div id="el-puani-konteynir" class="el-puani-konteynir">
+                        <span class="el-puani-etiket">Per Toplamı: <span id="el-puani-deger">0</span></span>
+                    </div>
+                    <div id="tas-rafi">
+                        <!-- Taşlar buraya dinamik olarak eklenir -->
+                    </div>
+                </div>
+
+                <div id="aksiyon-panel-sag" style="display:flex;flex-direction:column;gap:4px;">
+                    <button id="btn-yeni-oyun" class="aksiyon-btn" title="Yeni oyun başlat">🔄 Yeni</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- BANNER (kafa atma vb.) -->
+    <div id="banner"></div>
+
+    <!-- BİLDİRİMLER -->
+    <div id="bildirimler"></div>
+
+    <!-- CANLI PUAN SAYACI -->
+    <div id="canli-sayac-overlay">
+        <div class="canli-sayac">
+            <div class="sayac-baslik">TOPLAM PUAN</div>
+            <div class="sayac-deger" id="sayac-deger">0</div>
+            <div class="sayac-etiket" id="sayac-etiket"></div>
+        </div>
+    </div>
+
+    <!-- SPARKLE KONTEYNER -->
+    <div class="sparkle-container" id="sparkle-container"></div>
+
+    <!-- MODAL -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal"></div>
+    </div>
+
+    <!-- SCRIPTS (sıra önemli!) -->
+    <script src="gameEngine.js"></script>
+    <script src="sounds.js"></script>
+    <script src="bot.js"></script>
+    <script src="renderer.js"></script>
+    <script src="game.js"></script>
+
+</body>
+
+</html>

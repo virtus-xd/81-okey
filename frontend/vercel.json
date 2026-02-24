@@ -1,0 +1,12 @@
+{
+    "rewrites": [
+        {
+            "source": "/multiplayer",
+            "destination": "/multiplayer.html"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/$1"
+        }
+    ]
+}

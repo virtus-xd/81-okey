@@ -1,0 +1,13 @@
+{
+  "name": "81-okey-multiplayer",
+  "version": "1.0.0",
+  "description": "81 Okey - 4 Kişilik Multiplayer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "socket.io": "^4.8.0"
+  }
+}

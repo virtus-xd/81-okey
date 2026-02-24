@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="81 Okey — 4 Kişilik Multiplayer. Arkadaşlarınızla gerçek zamanlı okey oynayın!">
+    <title>81 Okey — Multiplayer</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
+</head>
+
+<body>
+
+    <!-- LOBİ EKRANI -->
+    <div id="lobi-ekrani">
+        <div class="lobi-kutu">
+            <div class="lobi-baslik">
+                <span class="lobi-emoji">🎲</span>
+                <h1>81 Okey</h1>
+                <span class="lobi-altbaslik">Multiplayer</span>
+            </div>
+
+            <div class="lobi-form">
+                <input type="text" id="oyuncu-isim" placeholder="İsminizi girin..." maxlength="20" autofocus>
+                <button id="btn-baglan" class="lobi-btn">🔗 Bağlan</button>
+            </div>
+
+            <div id="lobi-durum" class="lobi-durum">
+                <div class="lobi-bekle">Bağlanmak için isim girip butona basın</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OYUN ALANI (lobiden sonra gösterilir) -->
+    <div id="oyun-alani" style="display:none;">
+
+        <!-- MASA ALANI -->
+        <div id="masa-container">
+
+            <!-- OYUNCU PANELLERİ -->
+            <div id="oyuncu-kuzey" class="oyuncu-panel">
+                <div class="avatar">K</div>
+                <div class="bilgi">
+                    <span class="isim" id="isim-kuzey">Kuzey</span>
+                    <span class="puan">0 puan</span>
+                    <span class="tas-sayisi">14 taş</span>
+                </div>
+            </div>
+
+            <div id="oyuncu-dogu" class="oyuncu-panel">
+                <div class="avatar">D</div>
+                <div class="bilgi">
+                    <span class="isim" id="isim-dogu">Doğu</span>
+                    <span class="puan">0 puan</span>
+                    <span class="tas-sayisi">14 taş</span>
+                </div>
+            </div>
+
+            <div id="oyuncu-bati" class="oyuncu-panel">
+                <div class="avatar">B</div>
+                <div class="bilgi">
+                    <span class="isim" id="isim-bati">Batı</span>
+                    <span class="puan">0 puan</span>
+                    <span class="tas-sayisi">14 taş</span>
+                </div>
+            </div>
+
+            <div id="oyuncu-guney" class="oyuncu-panel">
+                <div class="avatar" style="background: linear-gradient(135deg, #f0c040, #e67e22);">S</div>
+                <div class="bilgi">
+                    <span class="isim" id="isim-guney">Sen</span>
+                    <span class="puan">0 puan</span>
+                    <span class="tas-sayisi">14 taş</span>
+                </div>
+            </div>
+
+            <!-- MERKEZ ALAN -->
+            <div id="merkez-alan">
+                <div id="gosterge-alani">
+                    <div class="etiket">GÖSTERGE</div>
+                    <div id="gosterge-tasi"></div>
+                </div>
+
+                <div id="istaka-yigini" title="Istakadan taş çek">
+                    <div class="istaka-tas"></div>
+                    <div class="istaka-tas"></div>
+                    <div class="istaka-tas"></div>
+                    <div id="istaka-sayi">50</div>
+                </div>
+
+                <div id="atilan-tas-alani">
+                    <div class="etiket">ATILAN</div>
+                    <div id="son-atilan-tas"></div>
+                </div>
+
+                <div id="okey-bilgi" style="font-size: 0.7rem; color: #aaa; margin-top: 4px;">
+                    Okey: <span id="okey-tasi">—</span>
+                </div>
+
+                <div id="istaka-bilgi" style="font-size: 0.7rem; color: #aaa;">
+                    Istaka: <span id="istaka-sayisi">50</span>
+                </div>
+            </div>
+
+            <!-- AÇILMIŞ KOMBİNASYONLAR -->
+            <div id="acilmis-kuzey" class="acilmis-alan"></div>
+            <div id="acilmis-dogu" class="acilmis-alan"></div>
+            <div id="acilmis-bati" class="acilmis-alan"></div>
+            <div id="acilmis-guney" class="acilmis-alan"></div>
+
+            <!-- OYUNCU ATILAN TAŞ ALANLARI -->
+            <div id="atilan-kuzey" class="oyuncu-atilan-alan kuzey">
+                <div class="atilan-etiket">Kuzey</div>
+                <div class="atilan-tas-yuvasi"></div>
+            </div>
+            <div id="atilan-dogu" class="oyuncu-atilan-alan dogu">
+                <div class="atilan-etiket">Doğu</div>
+                <div class="atilan-tas-yuvasi"></div>
+            </div>
+            <div id="atilan-bati" class="oyuncu-atilan-alan bati">
+                <div class="atilan-etiket">Batı</div>
+                <div class="atilan-tas-yuvasi"></div>
+            </div>
+            <div id="atilan-guney" class="oyuncu-atilan-alan guney">
+                <div class="atilan-etiket">Sen</div>
+                <div class="atilan-tas-yuvasi"></div>
+            </div>
+
+            <!-- ÇİFTE GÖSTERGESİ -->
+            <div id="cifte-gosterge">⚡ ÇİFTE GİDİLDİ</div>
+
+            <!-- SES BUTONU -->
+            <button id="btn-ses" title="Ses aç/kapat">🔊</button>
+
+            <!-- HUD -->
+            <div id="hud">
+                <div class="hud-kutu">
+                    <div class="baslik">Tur</div>
+                    <div class="deger" id="tur-sayisi">1</div>
+                </div>
+            </div>
+
+            <!-- SKOR PANELİ -->
+            <div id="skor-panel" class="hud-kutu">
+                <div class="baslik">Skor</div>
+                <table id="skor-tablo">
+                    <thead>
+                        <tr>
+                            <th>Oyuncu</th>
+                            <th>Puan</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- OYUNCU ELİ (RAF) -->
+        <div id="raf-container">
+            <div id="acilmis-raf" style="display:flex;gap:4px;min-height:30px;width:100%;padding:2px 8px;"></div>
+
+            <div style="display:flex;align-items:flex-end;width:100%;gap:6px;">
+                <div id="aksiyon-panel">
+                    <button id="btn-cek" class="aksiyon-btn" title="Istakadan taş çek">📥 Çek</button>
+                    <button id="btn-at" class="aksiyon-btn tehlike" disabled title="Seçili taşı at">📤 At</button>
+                    <button id="btn-ac" class="aksiyon-btn basari" disabled title="Elini aç">🎴 Aç</button>
+                    <button id="btn-cifte" class="aksiyon-btn cifte" title="Çifte ilan et">⚡ Çifte</button>
+                </div>
+
+                <div class="raf-orta-sutun"
+                    style="flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;">
+                    <div id="el-puani-konteynir" class="el-puani-konteynir">
+                        <span class="el-puani-etiket">Per Toplamı: <span id="el-puani-deger">0</span></span>
+                    </div>
+                    <div id="tas-rafi"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SIRA GÖSTERGESİ (position:fixed, oyun-alani dışında) -->
+    <div id="sira-gosterge" class="sira-gosterge bekle" style="display:none;">⏳ Bekleniyor...</div>
+
+    <!-- YANDAN AL PANELİ -->
+    <div id="yandan-al-panel" style="display:none;"></div>
+
+    <!-- BANNER -->
+    <div id="banner"></div>
+
+    <!-- BİLDİRİMLER -->
+    <div id="bildirimler"></div>
+
+    <!-- CANLI PUAN SAYACI -->
+    <div id="canli-sayac-overlay">
+        <div class="canli-sayac">
+            <div class="sayac-baslik">TOPLAM PUAN</div>
+            <div class="sayac-deger" id="sayac-deger">0</div>
+            <div class="sayac-etiket" id="sayac-etiket"></div>
+        </div>
+    </div>
+
+    <!-- SPARKLE KONTEYNER -->
+    <div class="sparkle-container" id="sparkle-container"></div>
+
+    <!-- MODAL -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal"></div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="gameEngine.js"></script>
+    <script src="sounds.js"></script>
+    <script src="renderer.js"></script>
+    <script src="gameMultiplayer.js"></script>
+
+</body>
+
+</html>
