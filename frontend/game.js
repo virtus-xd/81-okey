@@ -820,7 +820,11 @@
         if (durum.faz !== 'atma' || durum.aktifOyuncuIndex !== 0) return;
 
         const hedefOyuncu = durum.oyuncular[hedefOyuncuIndex];
-        if (!hedefOyuncu || !hedefOyuncu.elAcildi) {
+        if (!hedefOyuncu) return;
+
+        // El açmamışsa işlem yapılamaz (acilmisKombs yok ise)
+        const hedefAcilmis = hedefOyuncu.elAcildi || (hedefOyuncu.acilmisKombs && hedefOyuncu.acilmisKombs.length > 0);
+        if (!hedefAcilmis) {
             R.bildirimGoster('Hedef oyuncu elini açmamış!', '', 2000);
             return;
         }
