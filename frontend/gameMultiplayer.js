@@ -83,7 +83,14 @@
 
     function sunucuyaBaglan(isim) {
         const sunucuUrl = window.BACKEND_URL || window.location.origin;
-        socket = io(sunucuUrl);
+
+        const durumYazi = document.getElementById('lobi-durum');
+        if (durumYazi) durumYazi.innerHTML = '<div class="lobi-bekle">⏳ Sunucuya bağlanılıyor... (ilk bağlantı 30s sürebilir)</div>';
+
+        socket = io(sunucuUrl, {
+            transports: ['websocket', 'polling'],
+            timeout: 20000
+        });
 
         socket.on('connect', () => {
             console.log('🔌 Sunucuya bağlandı:', socket.id);
@@ -96,9 +103,28 @@
             }
         });
 
+        socket.on('connect_error', (err) => {
+            console.error('❌ Bağlantı hatası:', err.message);
+            if (durumYazi) {
+                durumYazi.innerHTML = `
+                    <div style="color:#f87171;padding:12px;border-radius:8px;background:rgba(248,113,113,0.1);">
+                        ❌ Sunucuya bağlanılamadı!<br>
+                        <small>Hata: ${err.message}</small><br>
+                        <small>Backend: ${sunucuUrl}</small><br><br>
+                        <strong>Render'daki sunucu uyumuş olabilir, 30 saniye bekleyip tekrar deneyin.</strong>
+                    </div>`;
+            }
+            const baglanBtn = document.getElementById('btn-baglan');
+            if (baglanBtn) {
+                baglanBtn.disabled = false;
+                baglanBtn.textContent = '🔗 Tekrar Dene';
+            }
+            socket.disconnect();
+            socket = null;
+        });
+
         socket.on('disconnect', () => {
             console.log('❌ Bağlantı kesildi');
-            const durumYazi = document.getElementById('lobi-durum');
             if (durumYazi) durumYazi.textContent = '❌ Bağlantı kesildi! Sayfayı yenileyin.';
         });
 
