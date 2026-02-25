@@ -607,7 +607,12 @@
         if (bot.elAcildi) return; // Zaten açık
 
         const esik = bot.elAcmaEsigi || GE.VARSAYILAN_ESIK;
-        const acmaSonucu = Bot.elAcmaKarari(bot.el, esik, durum.okeyTasi);
+        let acmaSonucu = Bot.elAcmaKarari(bot.el, esik, durum.okeyTasi);
+
+        // Çifte ilan eden bot SADECE çift açabilir
+        if (acmaSonucu && bot.cifteIlanEtti && acmaSonucu.yontem === 'seri') {
+            acmaSonucu = null;
+        }
 
         if (acmaSonucu) {
             bot.elAcildi = true;
@@ -801,7 +806,12 @@
         if (bot.elAcildi) return;
 
         const esik = bot.elAcmaEsigi || GE.VARSAYILAN_ESIK;
-        const acmaSonucu = Bot.elAcmaKarari(bot.el, esik, durum.okeyTasi);
+        let acmaSonucu = Bot.elAcmaKarari(bot.el, esik, durum.okeyTasi);
+
+        // Çifte ilan eden bot SADECE çift açabilir
+        if (acmaSonucu && bot.cifteIlanEtti && acmaSonucu.yontem === 'seri') {
+            acmaSonucu = null;
+        }
 
         if (acmaSonucu) {
             bot.elAcildi = true;
@@ -1048,6 +1058,12 @@
 
         if (!acmaSonucu) {
             R.bildirimGoster(`El açılamıyor. Minimum ${esik} puan ve geçerli perler gerekiyor. Gruplar arasında boşluk bıraktığınızdan emin olun.`, '', 4000);
+            return;
+        }
+
+        // Çifte ilan eden oyuncu SADECE çift açabilir
+        if (ben.cifteIlanEtti && acmaSonucu.yontem === 'seri') {
+            R.bildirimGoster('Çifte gittiğinizi ilan ettiniz — sadece çift açabilirsiniz!', 'cifte-bildirim', 3500);
             return;
         }
 
