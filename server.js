@@ -322,9 +322,16 @@ function tasAtildiSonrasi(odaId, atilanTas, atanIndex) {
     oyun.izinAtanIndex = atanIndex;
 
     // KURAL: Eğer çifte ilan etmişse, turn progression'ı BLOKE ETME!
-    // Sadece yandanalBekleyen'i set et ve turn'ü ilerlet.
+    // Sadece yandanalBekleyen'i set et ve turn'ü ilerlet + Seçim Popup'ı tetikle
     if (yandaki.cifteIlanEtti) {
         siraIlerlet(odaId);
+        const yandakiSocket = io.sockets.sockets.get(oda.oyuncular[yandakiIndex].socketId);
+        if (yandakiSocket) {
+            yandakiSocket.emit('yandanAlSecenegi', {
+                tas: atilanTas,
+                atanIsim: oyun.oyuncular[atanIndex].isim
+            });
+        }
         oyuncuyaBildirimGonder(odaId, yandakiIndex, "Sıra sizde! İsterseniz yandan taşı bekletmeden alabilir veya ortadan çekebilirsiniz.", 'cifte-bildirim', 4000);
         return;
     }

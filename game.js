@@ -282,9 +282,16 @@
         const yandakiIndex = (atanIndex + 1) % 4;
         const yandaki = durum.oyuncular[yandakiIndex];
 
-        // ÖNCELİK 1: Yandaki çifte ilan ettiyse → serbestçe alır
+        // ÖNCELİK 1: Yandaki çifte ilan ettiyse → serbestçe alır (veya seçim yapar)
         if (yandaki.cifteIlanEtti) {
-            if (cifteIlanliYandanAlma(atilanTas, atanIndex, yandakiIndex)) return;
+            if (cifteIlanliYandanAlma(atilanTas, atanIndex, yandakiIndex)) {
+                return;
+            } else {
+                // Eğer çifte ilan etmiş ama alamıyorsa (ör. işlek), sıra doğrudan geçer
+                siraIlerlet();
+                tumEkraniGuncelle();
+                return;
+            }
         }
 
         // ÖNCELİK 2: Yandaki oyuncu seri gidiyor → normal sıra, isterse alır
