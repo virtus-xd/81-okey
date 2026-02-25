@@ -313,11 +313,11 @@
                     grup.classList.remove('isle-hedef');
                     try {
                         const veri = JSON.parse(e.dataTransfer.getData('text/plain'));
-                        const tasIdx = veri.slotIndex; // dragstart'ta 'slotIndex' ile gönderildi
+                        const tileId = veri.id; // tile ID (stable, network-friendly)
                         const oyuncuIdx = parseInt(grup.dataset.oyuncuIndex);
                         const kombIdx = parseInt(grup.dataset.kombIndex);
-                        if (secenekler.onTasIsleDrop && tasIdx !== undefined) {
-                            secenekler.onTasIsleDrop(tasIdx, oyuncuIdx, kombIdx);
+                        if (secenekler.onTasIsleDrop && tileId !== undefined) {
+                            secenekler.onTasIsleDrop(tileId, oyuncuIdx, kombIdx);
                         }
                     } catch (err) { /* ignore */ }
                 });

@@ -807,11 +807,12 @@
 
     /**
      * Oyuncunun elindeki bir taşı masadaki açılmış bir kombinasyona işler.
-     * @param {number} tasIndex - Oyuncunun elindeki taşın index'i
+     * @param {number} tileId           - İşlenecek taşın ID'si (dataset.id'den gelir)
      * @param {number} hedefOyuncuIndex - Hedef kombinasyonun sahibi oyuncu index'i
-     * @param {number} kombIndex - Hedef kombinasyonun index'i
+     * @param {number} kombIndex        - Hedef kombinasyonun index'i
+     * @param {number} [ikincitasId]    - İkinci taşın ID'si (çift açıcıya işleme için)
      */
-    function tasIsle(tasIndex, hedefOyuncuIndex, kombIndex, ikincitasIndex) {
+    function tasIsle(tileId, hedefOyuncuIndex, kombIndex, ikincitasId) {
         const ben = durum.oyuncular[0];
         if (!ben.elAcildi) {
             R.bildirimGoster('Önce elinizi açmanız gerekiyor!', '', 2000);
@@ -822,7 +823,7 @@
         const hedefOyuncu = durum.oyuncular[hedefOyuncuIndex];
         if (!hedefOyuncu) return;
 
-        // El açmamışsa işlem yapılamaz (acilmisKombs yok ise)
+        // El açmamışsa işlem yapılamaz
         const hedefAcilmis = hedefOyuncu.elAcildi || (hedefOyuncu.acilmisKombs && hedefOyuncu.acilmisKombs.length > 0);
         if (!hedefAcilmis) {
             R.bildirimGoster('Hedef oyuncu elini açmamış!', '', 2000);
@@ -833,20 +834,18 @@
 
         // ── ÇİFT AÇICIYA: iki taş gerekli ──
         if (hedefYontem === 'cift') {
-            if (ikincitasIndex === undefined || ikincitasIndex === null) {
+            if (ikincitasId === undefined || ikincitasId === null) {
                 R.bildirimGoster('Çift açıcıya işlemek için iki taş seçmelisiniz! (Raftan ikinci taşa da tıklayın)', '', 3000);
                 return;
             }
-            const buyukIdx = Math.max(tasIndex, ikincitasIndex);
-            const kucukIdx = Math.min(tasIndex, ikincitasIndex);
-            const tas1 = ben.el[kucukIdx];
-            const tas2 = ben.el[buyukIdx];
+            const tas1 = ben.el.find(t => t.id === tileId);
+            const tas2 = ben.el.find(t => t.id === ikincitasId);
             if (!tas1 || !tas2) return;
 
             const sonuc = GE.ciftIslenebilirMi(tas1, tas2, hedefOyuncu.acilmisKombs);
             if (sonuc.islenebilir) {
-                ben.el.splice(buyukIdx, 1);
-                ben.el.splice(kucukIdx, 1);
+                // ID tabanlı filtreleme — sıra bağımsız
+                ben.el = ben.el.filter(t => t.id !== tileId && t.id !== ikincitasId);
                 ben.kalanTaslar = ben.el;
                 hedefOyuncu.acilmisKombs = sonuc.yeniKombs;
                 Ses.tasCek();
@@ -860,8 +859,11 @@
         }
 
         // ── SERİ/PER AÇICIYA TEK TAŞ ──
-        const tas = ben.el[tasIndex];
-        if (!tas) return;
+        const tas = ben.el.find(t => t.id === tileId);
+        if (!tas) {
+            R.bildirimGoster('Taş elde bulunamadı!', '', 2000);
+            return;
+        }
 
         if (!hedefOyuncu.acilmisKombs || !hedefOyuncu.acilmisKombs[kombIndex]) {
             R.bildirimGoster('Geçersiz hedef kombinasyon!', '', 2000);
@@ -869,28 +871,24 @@
         }
 
         const kombinasyon = hedefOyuncu.acilmisKombs[kombIndex];
-        const sonuc = GE.tasIslenebilirMi(tas, kombinasyon, durum.okeyTasi);
+        const sonuc = GE.canAddTileToMeld(tas, kombinasyon, durum.okeyTasi);
 
-        if (sonuc.islenebilir) {
-            // Taşı elden çıkar
-            ben.el.splice(tasIndex, 1);
+        if (sonuc.gecerli) {
+            // Taşı elden çıkar (ID tabanlı — sıra bağımsız)
+            ben.el = ben.el.filter(t => t.id !== tileId);
             ben.kalanTaslar = ben.el;
-
             // Kombinasyonu güncelle
-            hedefOyuncu.acilmisKombs[kombIndex] = sonuc.yeniKombinasyon;
-
+            hedefOyuncu.acilmisKombs[kombIndex] = sonuc.yeniMeld;
             Ses.tasCek();
-            R.bildirimGoster(`Taş işlendi: ${sonuc.sebep}`, '', 2000);
+            R.bildirimGoster('Taş işlendi!', '', 2000);
             tumEkraniGuncelle();
-
-            // Tur sonu kontrolü (tüm taşlar işlendiyse)
-            if (ben.el.length === 0) {
-                turSonuMu();
-            }
+            if (ben.el.length === 0) turSonuMu();
         } else {
             R.bildirimGoster(sonuc.sebep, '', 2000);
         }
     }
+
+
 
     /**
      * Bot'un elindeki uygun taşları masadaki açılmış kombinasyonlara işlemesini dener.

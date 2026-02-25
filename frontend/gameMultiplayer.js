@@ -358,10 +358,13 @@
         socket.emit('cifteIlan');
     }
 
-    function tasIsle(tasIndex, hedefOyuncuIndex, kombIndex) {
+    function tasIsle(tileId, hedefOyuncuIndex, kombIndex) {
         if (!socket) return;
-        socket.emit('tasIsle', { tasIndex, hedefOyuncuIndex, kombIndex });
+        // meldId formatı: "ownerIndex:kombIndex" — sunucu tarafıyla veya single-player ile aynı
+        const meldId = `${hedefOyuncuIndex}:${kombIndex}`;
+        socket.emit('tasIsle', { tileId, meldId });
     }
+
 
     // ─── TAŞ TIKLANMA / SÜRÜKLEME ─────────────────────────
 

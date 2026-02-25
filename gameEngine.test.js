@@ -27,7 +27,9 @@ const {
     izinIste,
     cifteIlanEt,
     turSonuKontrol,
-    islerTasBelirle
+    islerTasBelirle,
+    canAddTileToMeld,
+    applyAddTileToMeld
 } = require('./gameEngine');
 
 let toplamTest = 0;
@@ -673,6 +675,247 @@ test('Serinin başına eklenebilecek taş → işlek', () => {
         ]]
     );
     assert.strictEqual(sonuc.islekMi, true);
+});
+
+// ============================================================================
+// canAddTileToMeld
+// ============================================================================
+
+bolum('canAddTileToMeld()');
+
+const okeyTasiTest = { sayi: 8, renk: 'kirmizi' };
+
+test('Seri sonuna ekleme (6-k onto [3,4,5]-k) → gecerli', () => {
+    const sonuc = canAddTileToMeld(
+        { sayi: 6, renk: 'kirmizi', jokerMi: false },
+        [
+            { sayi: 3, renk: 'kirmizi', jokerMi: false },
+            { sayi: 4, renk: 'kirmizi', jokerMi: false },
+            { sayi: 5, renk: 'kirmizi', jokerMi: false }
+        ],
+        okeyTasiTest
+    );
+    assert.strictEqual(sonuc.gecerli, true);
+    assert.strictEqual(sonuc.tip, 'seri');
+    assert.strictEqual(sonuc.yeniMeld.length, 4);
+    assert.strictEqual(sonuc.yeniMeld[3].sayi, 6);
+});
+
+test('Seri basina ekleme (2-m onto [3,4,5]-m) → gecerli', () => {
+    const sonuc = canAddTileToMeld(
+        { sayi: 2, renk: 'mavi', jokerMi: false },
+        [
+            { sayi: 3, renk: 'mavi', jokerMi: false },
+            { sayi: 4, renk: 'mavi', jokerMi: false },
+            { sayi: 5, renk: 'mavi', jokerMi: false }
+        ],
+        okeyTasiTest
+    );
+    assert.strictEqual(sonuc.gecerli, true);
+    assert.strictEqual(sonuc.tip, 'seri');
+    assert.strictEqual(sonuc.yeniMeld[0].sayi, 2);
+});
+
+test('Wildcard okey serinin sonuna eklenebilir → gecerli', () => {
+    // okeyTasi = {8, kirmizi}; wildcard tile = {8, kirmizi, jokerMi:false}
+    const wildcard = { sayi: 8, renk: 'kirmizi', jokerMi: false };
+    const sonuc = canAddTileToMeld(
+        wildcard,
+        [
+            { sayi: 3, renk: 'kirmizi', jokerMi: false },
+            { sayi: 4, renk: 'kirmizi', jokerMi: false },
+            { sayi: 5, renk: 'kirmizi', jokerMi: false }
+        ],
+        { sayi: 8, renk: 'kirmizi' } // wildcard = 8-kirmizi
+    );
+    assert.strictEqual(sonuc.gecerli, true);
+    assert.strictEqual(sonuc.tip, 'seri');
+});
+
+test('12-13-1 wrap: 1-m onto [12,13]-m → gecersiz', () => {
+    const sonuc = canAddTileToMeld(
+        { sayi: 1, renk: 'mavi', jokerMi: false },
+        [
+            { sayi: 12, renk: 'mavi', jokerMi: false },
+            { sayi: 13, renk: 'mavi', jokerMi: false }
+        ],
+        okeyTasiTest
+    );
+    assert.strictEqual(sonuc.gecerli, false, '12-13-1 wrap yasak olmali');
+});
+
+test('Per 3→4: 7-siyah onto [7-k,7-m,7-s] → gecerli', () => {
+    const sonuc = canAddTileToMeld(
+        { sayi: 7, renk: 'siyah', jokerMi: false },
+        [
+            { sayi: 7, renk: 'kirmizi', jokerMi: false },
+            { sayi: 7, renk: 'mavi', jokerMi: false },
+            { sayi: 7, renk: 'sari', jokerMi: false }
+        ],
+        okeyTasiTest
+    );
+    assert.strictEqual(sonuc.gecerli, true);
+    assert.strictEqual(sonuc.tip, 'per');
+    assert.strictEqual(sonuc.yeniMeld.length, 4);
+});
+
+test('Per duplicate renk: 7-kirmizi onto [7-k,7-m,7-s] → gecersiz', () => {
+    const sonuc = canAddTileToMeld(
+        { sayi: 7, renk: 'kirmizi', jokerMi: false },
+        [
+            { sayi: 7, renk: 'kirmizi', jokerMi: false },
+            { sayi: 7, renk: 'mavi', jokerMi: false },
+            { sayi: 7, renk: 'sari', jokerMi: false }
+        ],
+        okeyTasiTest
+    );
+    assert.strictEqual(sonuc.gecerli, false);
+});
+
+test('Per 4→5 yasak: 7-siyah onto [7-k,7-m,7-s,7-siy] → gecersiz', () => {
+    const sonuc = canAddTileToMeld(
+        { sayi: 7, renk: 'siyah', jokerMi: false },
+        [
+            { sayi: 7, renk: 'kirmizi', jokerMi: false },
+            { sayi: 7, renk: 'mavi', jokerMi: false },
+            { sayi: 7, renk: 'sari', jokerMi: false },
+            { sayi: 7, renk: 'siyah', jokerMi: false }
+        ],
+        okeyTasiTest
+    );
+    assert.strictEqual(sonuc.gecerli, false);
+});
+
+test('Cift melde (2 tas) tas eklenemez → gecersiz', () => {
+    const sonuc = canAddTileToMeld(
+        { sayi: 5, renk: 'kirmizi', jokerMi: false },
+        [
+            { sayi: 5, renk: 'kirmizi', jokerMi: false },
+            { sayi: 5, renk: 'kirmizi', jokerMi: false }
+        ],
+        okeyTasiTest
+    );
+    assert.strictEqual(sonuc.gecerli, false);
+});
+
+test('Yanlis renk seriye ekleme → gecersiz', () => {
+    const sonuc = canAddTileToMeld(
+        { sayi: 6, renk: 'mavi', jokerMi: false }, // mavi, kirmizi seriye
+        [
+            { sayi: 3, renk: 'kirmizi', jokerMi: false },
+            { sayi: 4, renk: 'kirmizi', jokerMi: false },
+            { sayi: 5, renk: 'kirmizi', jokerMi: false }
+        ],
+        okeyTasiTest
+    );
+    assert.strictEqual(sonuc.gecerli, false);
+});
+
+test('Joker (sahte okey) iceren seriye ekleme → gecerli', () => {
+    // [3-k, joker, 5-k] -> joker fills 4, runStart=3, runEnd=5
+    // Adding 6-k to tail should be valid
+    const sonuc = canAddTileToMeld(
+        { sayi: 6, renk: 'kirmizi', jokerMi: false },
+        [
+            { sayi: 3, renk: 'kirmizi', jokerMi: false },
+            { sayi: 0, renk: 'joker', jokerMi: true }, // fake joker fills 4
+            { sayi: 5, renk: 'kirmizi', jokerMi: false }
+        ],
+        { sayi: 4, renk: 'kirmizi' } // okeyTasi=4-kirmizi so joker takes value 4
+    );
+    assert.strictEqual(sonuc.gecerli, true);
+    assert.strictEqual(sonuc.tip, 'seri');
+});
+
+// ============================================================================
+// applyAddTileToMeld
+// ============================================================================
+
+bolum('applyAddTileToMeld()');
+
+function _makeTestState(handTiles, meldTiles, config = {}) {
+    return {
+        oyuncular: [
+            { // player 0 (actor)
+                isim: 'Ali',
+                el: handTiles,
+                kalanTaslar: handTiles,
+                elAcildi: config.actorOpen !== false,
+                acilmisKombs: [],
+                elAcmaYontemi: 'seri'
+            },
+            { // player 1 (meld owner)
+                isim: 'Veli',
+                el: [],
+                kalanTaslar: [],
+                elAcildi: config.ownerOpen !== false,
+                acilmisKombs: [meldTiles],
+                elAcmaYontemi: 'seri'
+            },
+            { isim: 'Bot2', el: [], kalanTaslar: [], elAcildi: false, acilmisKombs: [] },
+            { isim: 'Bot3', el: [], kalanTaslar: [], elAcildi: false, acilmisKombs: [] }
+        ],
+        aktifOyuncuIndex: config.aktifIndex !== undefined ? config.aktifIndex : 0,
+        faz: config.faz || 'atma',
+        okeyTasi: config.okeyTasi || { sayi: 8, renk: 'kirmizi' }
+    };
+}
+
+test('Basarili isleme: tas elden cikar, melde eklenir', () => {
+    const tile = { id: 101, sayi: 6, renk: 'kirmizi', jokerMi: false };
+    const meld = [
+        { id: 1, sayi: 3, renk: 'kirmizi', jokerMi: false },
+        { id: 2, sayi: 4, renk: 'kirmizi', jokerMi: false },
+        { id: 3, sayi: 5, renk: 'kirmizi', jokerMi: false }
+    ];
+    const state = _makeTestState([tile], meld);
+    const sonuc = applyAddTileToMeld(state, 0, 101, '1:0');
+
+    assert.strictEqual(sonuc.basarili, true);
+    assert.strictEqual(sonuc.yeniState.oyuncular[0].el.length, 0, 'Tas elden cikmali');
+    assert.strictEqual(sonuc.yeniState.oyuncular[1].acilmisKombs[0].length, 4, 'Meld 4 tasa cikmali');
+    assert.strictEqual(sonuc.yeniState.oyuncular[1].acilmisKombs[0][3].id, 101);
+    // Orijinal state degismemeli (immutable check)
+    assert.strictEqual(state.oyuncular[0].el.length, 1, 'Orijinal state degismemeli');
+});
+
+test('Yanlis oyuncunun sirasi → basarisiz', () => {
+    const tile = { id: 101, sayi: 6, renk: 'kirmizi', jokerMi: false };
+    const meld = [
+        { id: 1, sayi: 3, renk: 'kirmizi', jokerMi: false },
+        { id: 2, sayi: 4, renk: 'kirmizi', jokerMi: false },
+        { id: 3, sayi: 5, renk: 'kirmizi', jokerMi: false }
+    ];
+    const state = _makeTestState([tile], meld, { aktifIndex: 1 }); // sira player 1'de
+    const sonuc = applyAddTileToMeld(state, 0, 101, '1:0');
+    assert.strictEqual(sonuc.basarili, false);
+    assert.ok(sonuc.hata.includes('Sıra'));
+});
+
+test('El acilmamis oyuncu isleyemez → basarisiz', () => {
+    const tile = { id: 101, sayi: 6, renk: 'kirmizi', jokerMi: false };
+    const state = _makeTestState([tile], [], { actorOpen: false });
+    const sonuc = applyAddTileToMeld(state, 0, 101, '1:0');
+    assert.strictEqual(sonuc.basarili, false);
+});
+
+test('Tas elde yok → basarisiz', () => {
+    const meld = [
+        { id: 1, sayi: 3, renk: 'kirmizi', jokerMi: false },
+        { id: 2, sayi: 4, renk: 'kirmizi', jokerMi: false },
+        { id: 3, sayi: 5, renk: 'kirmizi', jokerMi: false }
+    ];
+    const state = _makeTestState([], meld); // bos el
+    const sonuc = applyAddTileToMeld(state, 0, 999, '1:0'); // 999 yok
+    assert.strictEqual(sonuc.basarili, false);
+    assert.ok(sonuc.hata.includes('bulunamad'));
+});
+
+test('Gecersiz meldId formati → basarisiz', () => {
+    const state = _makeTestState([], []);
+    const sonuc = applyAddTileToMeld(state, 0, 1, 'bad_format');
+    assert.strictEqual(sonuc.basarili, false);
+    assert.ok(sonuc.hata.includes('meldId'));
 });
 
 // ============================================================================

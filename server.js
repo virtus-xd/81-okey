@@ -818,9 +818,9 @@ io.on('connection', (socket) => {
     });
 
     // ═══ TAŞ İŞLE ═══
-    // tasIsle: { tasIndex, ikincitasIndex?, hedefOyuncuIndex, kombIndex }
-    // Çift açıcıya işleme: ikincitasIndex gerekli, her ikisi de çift olmalı
-    socket.on('tasIsle', ({ tasIndex, ikincitasIndex, hedefOyuncuIndex, kombIndex }) => {
+    // tasIsle: { tileId, meldId }      — seri/per açıcıya tek taş
+    //          { tileId, tileId2, meldId } — çift açıcıya iki taş
+    socket.on('tasIsle', ({ tileId, tileId2, meldId }) => {
         const oda = odalar.get(oyuncuOdaId);
         if (!oda || !oda.oyun) return;
         const oyun = oda.oyun;
@@ -834,8 +834,14 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const tas = oyuncu.el[tasIndex];
-        if (!tas) return;
+        // ── meldId parse ──
+        const parts = String(meldId).split(':');
+        if (parts.length !== 2) {
+            socket.emit('bildirim', { mesaj: 'Geçersiz meldId.', tip: '', sure: 2000 });
+            return;
+        }
+        const hedefOyuncuIndex = parseInt(parts[0], 10);
+        const kombIndex = parseInt(parts[1], 10);
 
         const hedefOyuncu = oyun.oyuncular[hedefOyuncuIndex];
         if (!hedefOyuncu || !hedefOyuncu.elAcildi) {
@@ -847,26 +853,22 @@ io.on('connection', (socket) => {
 
         // ── ÇİFT AÇICIYA İŞLEME ──
         if (hedefYontem === 'cift') {
-            if (ikincitasIndex === undefined || ikincitasIndex === null) {
+            if (!tileId2) {
                 socket.emit('bildirim', { mesaj: 'Çift açıcıya işlemek için iki taş seçmelisiniz!', tip: '', sure: 3000 });
                 return;
             }
-            // İki indexin farklı olduğunu garantile
-            if (tasIndex === ikincitasIndex) {
+            if (tileId === tileId2) {
                 socket.emit('bildirim', { mesaj: 'İki farklı taş seçmelisiniz!', tip: '', sure: 2000 });
                 return;
             }
-            // Büyükten küçüğe splice sırası (index kayması önleme)
-            const buyukIdx = Math.max(tasIndex, ikincitasIndex);
-            const kucukIdx = Math.min(tasIndex, ikincitasIndex);
-            const tas2 = oyuncu.el[buyukIdx];
-            const tas1 = oyuncu.el[kucukIdx];
+            const tas1 = oyuncu.el.find(t => t.id === tileId);
+            const tas2 = oyuncu.el.find(t => t.id === tileId2);
             if (!tas1 || !tas2) return;
 
             const sonuc = GE.ciftIslenebilirMi(tas1, tas2, hedefOyuncu.acilmisKombs);
             if (sonuc.islenebilir) {
-                oyuncu.el.splice(buyukIdx, 1);
-                oyuncu.el.splice(kucukIdx, 1);
+                // ID tabanlı filtreleme — sıra bağımsız
+                oyuncu.el = oyuncu.el.filter(t => t.id !== tileId && t.id !== tileId2);
                 oyuncu.kalanTaslar = oyuncu.el;
                 hedefOyuncu.acilmisKombs = sonuc.yeniKombs;
 
@@ -879,30 +881,24 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // ── SERİ/PER AÇICIYA TEK TAŞ İŞLEME ──
-        if (!hedefOyuncu.acilmisKombs || !hedefOyuncu.acilmisKombs[kombIndex]) {
-            socket.emit('bildirim', { mesaj: 'Geçersiz hedef kombinasyon!', tip: '', sure: 2000 });
-            return;
-        }
+        // ── SERİ/PER AÇICIYA TEK TAŞ — applyAddTileToMeld (authoritative) ──
+        const sonuc = GE.applyAddTileToMeld(oyun, oyuncuIndex, tileId, meldId);
 
-        const kombinasyon = hedefOyuncu.acilmisKombs[kombIndex];
-        const sonuc = GE.tasIslenebilirMi(tas, kombinasyon, oyun.okeyTasi);
+        if (sonuc.basarili) {
+            // Yeni state'i uygula
+            oyun.oyuncular = sonuc.yeniState.oyuncular;
 
-        if (sonuc.islenebilir) {
-            oyuncu.el.splice(tasIndex, 1);
-            oyuncu.kalanTaslar = oyuncu.el;
-            hedefOyuncu.acilmisKombs[kombIndex] = sonuc.yeniKombinasyon;
-
-            herkeseBildirimGonder(oyuncuOdaId, `${oyuncu.isim} taş işledi: ${sonuc.sebep}`, '', 2000);
+            herkeseBildirimGonder(oyuncuOdaId, `${oyuncu.isim} taş işledi!`, '', 2000);
             herkeseDurumGonder(oyuncuOdaId);
 
-            if (oyuncu.el.length === 0) {
+            if (oyun.oyuncular[oyuncuIndex].el.length === 0) {
                 turSonuKontrol(oyuncuOdaId);
             }
         } else {
-            socket.emit('bildirim', { mesaj: sonuc.sebep, tip: '', sure: 2000 });
+            socket.emit('bildirim', { mesaj: sonuc.hata, tip: '', sure: 2000 });
         }
     });
+
 
     // ═══ BAĞLANTI KESİLDİ ═══
     socket.on('disconnect', () => {
