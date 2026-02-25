@@ -277,9 +277,16 @@
         const yandakiIndex = (atanIndex + 1) % 4;
         const yandaki = durum.oyuncular[yandakiIndex];
 
-        // ÖNCELİK 1: Yandaki çifte ilan ettiyse → serbestçe alır
+        // ÖNCELİK 1: Yandaki çifte ilan ettiyse → serbestçe alır (veya seçim yapar)
         if (yandaki.cifteIlanEtti) {
-            if (cifteIlanliYandanAlma(atilanTas, atanIndex, yandakiIndex)) return;
+            if (cifteIlanliYandanAlma(atilanTas, atanIndex, yandakiIndex)) {
+                return;
+            } else {
+                // Eğer çifte ilan etmiş ama alamıyorsa (ör. işlek), sıra doğrudan geçer
+                siraIlerlet();
+                tumEkraniGuncelle();
+                return;
+            }
         }
 
         // ÖNCELİK 2: Yandaki oyuncu seri gidiyor → normal sıra, isterse alır
@@ -381,18 +388,9 @@
             setTimeout(() => { botTasAt(yandakiIndex); }, 800);
             return true;
         } else {
-            // İnsan oyuncu çifte ilan etmişse → otomatik al
-            Ses.tasCek();
-            R.bildirimGoster('Çifte hakkınızla yandan taşı aldınız! (açmak zorunda değilsiniz)', 'cifte-bildirim', 3000);
-            oyuncu.el.push(atilanTas);
-            durum.sonAtilanTas = durum.atilanTaslar.length > 0
-                ? durum.atilanTaslar[durum.atilanTaslar.length - 1] : null;
-
-            durum.aktifOyuncuIndex = 0;
-            durum.faz = 'atma';
-            yandanAlButonGizle();
-            zamanlayiciSifirla();
-            tumEkraniGuncelle();
+            // İNSAN OYUNCU çifte ilan etmişse -> SERBESTÇE alabilir ama otomatik alamaz (Ortadan çekme hakkı da var)
+            // Sadece seçeneği göster
+            yandanAlSecenekGoster(atilanTas, atanIndex);
             return true;
         }
     }
