@@ -197,7 +197,10 @@
         if (atBtn) atBtn.disabled = !(benSirada && atFazi && durum.seciliTasId !== null);
         if (acBtn) acBtn.disabled = !(benSirada && atFazi);
         if (cifteBtn) {
-            cifteBtn.disabled = durum.oyunBitti || durum.oyuncular[0].cifteIlanEtti;
+            const ben = durum.oyuncular[0];
+            const seriActi = ben.elAcildi && (!ben.elAcmaYontemi || ben.elAcmaYontemi === 'seri');
+            cifteBtn.style.display = seriActi ? 'none' : '';
+            cifteBtn.disabled = durum.oyunBitti || ben.cifteIlanEtti;
         }
     }
 
