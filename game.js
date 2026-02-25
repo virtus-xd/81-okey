@@ -442,8 +442,29 @@
                 return;
             }
 
+            // Atan oyuncu zaten seri açmışsa → izin gerekmez (çifte gitme ihtimali yok)
+            const atan = durum.oyuncular[atanIndex];
+            if (atan.elAcildi && (!atan.elAcmaYontemi || atan.elAcmaYontemi === 'seri')) {
+                Ses.tasCek();
+                ben.el.push(atilanTas);
+                durum.sonAtilanTas = durum.atilanTaslar.length > 0
+                    ? durum.atilanTaslar[durum.atilanTaslar.length - 1] : null;
+                durum.faz = 'atma';
+                // Oyuncu henüz açmamışsa açmak zorunlu olur
+                if (!ben.elAcildi) {
+                    durum.zorunluAcma = true;
+                    R.bildirimGoster(`${atan.isim} zaten elini açmış — taşı aldınız! Elinizi açmak ZORUNDASINIZ.`, 'cifte-bildirim', 3500);
+                } else {
+                    R.bildirimGoster(`${atan.isim} zaten elini açmış — izinsiz aldınız!`, '', 2500);
+                }
+                zamanlayiciSifirla();
+                tumEkraniGuncelle();
+                return;
+            }
+
             // Seri gidiyor → izin iste (atan oyuncudan)
             izinIsteAkisi(0, atanIndex, atilanTas, true);
+
         };
     }
 
