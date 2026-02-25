@@ -306,20 +306,6 @@ function tasAtildiSonrasi(odaId, atilanTas, atanIndex) {
                 return;
             }
         } catch (e) { /* ignore */ }
-
-        // Seçenek sun (Otomatik alma!)
-        oyun.yandanAlBekleyen = yandakiIndex;
-        oyun.izinTas = atilanTas;
-        oyun.izinAtanIndex = atanIndex;
-
-        const yandakiSocket = io.sockets.sockets.get(oda.oyuncular[yandakiIndex].socketId);
-        if (yandakiSocket) {
-            yandakiSocket.emit('yandanAlSecenegi', {
-                tas: atilanTas,
-                atanIsim: oyun.oyuncular[atanIndex].isim
-            });
-        }
-        return;
     }
 
     // KURAL: Yasaklıysa ve çifte değilse → pas
@@ -330,10 +316,18 @@ function tasAtildiSonrasi(odaId, atilanTas, atanIndex) {
         return;
     }
 
-    // Yandaki oyuncuya "Yandan Al" seçeneği gönder
+    // Seçenek sun
     oyun.yandanAlBekleyen = yandakiIndex;
     oyun.izinTas = atilanTas;
     oyun.izinAtanIndex = atanIndex;
+
+    // KURAL: Eğer çifte ilan etmişse, turn progression'ı BLOKE ETME!
+    // Sadece yandanalBekleyen'i set et ve turn'ü ilerlet.
+    if (yandaki.cifteIlanEtti) {
+        siraIlerlet(odaId);
+        oyuncuyaBildirimGonder(odaId, yandakiIndex, "Sıra sizde! İsterseniz yandan taşı bekletmeden alabilir veya ortadan çekebilirsiniz.", 'cifte-bildirim', 4000);
+        return;
+    }
 
     const yandakiSocket = io.sockets.sockets.get(oda.oyuncular[yandakiIndex].socketId);
     if (yandakiSocket) {
@@ -967,6 +961,7 @@ function izinVerIsle(odaId) {
     const oyun = oda.oyun;
 
     oyun.izinBekleniyor = false;
+    oyun.yandanAlBekleyen = -1; // Yandan alma şansı kapandı
     const isteyenIndex = oyun.izinIsteyenIndex;
     const isteyen = oyun.oyuncular[isteyenIndex];
     const atilanTas = oyun.izinTas;

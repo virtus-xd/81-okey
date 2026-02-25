@@ -226,6 +226,15 @@
         const atilanContainer = document.getElementById('atilan-tas-alani');
         if (atilanContainer) {
             R.atilanTasRenderEt(durum.sonAtilanTas, durum.okeyTasi, atilanContainer);
+
+            // TIKLAMA DESTEĞİ: Eğer sıra bizdeyse ve çekme fazındaysak, atılan taşa tıklayarak alabilmeliyiz
+            const sonTasEl = document.getElementById('son-atilan-tas');
+            if (sonTasEl && durum.aktifOyuncuIndex === benimIndexim && durum.faz === 'cekme') {
+                sonTasEl.style.cursor = 'pointer';
+                sonTasEl.onclick = () => {
+                    socket.emit('yandanAl');
+                };
+            }
         }
 
         // Gösterge / Okey
