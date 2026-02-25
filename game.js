@@ -386,18 +386,9 @@
             setTimeout(() => { botTasAt(yandakiIndex); }, 800);
             return true;
         } else {
-            // İnsan oyuncu çifte ilan etmişse → otomatik al
-            Ses.tasCek();
-            R.bildirimGoster('Çifte hakkınızla yandan taşı aldınız! (açmak zorunda değilsiniz)', 'cifte-bildirim', 3000);
-            oyuncu.el.push(atilanTas);
-            durum.sonAtilanTas = durum.atilanTaslar.length > 0
-                ? durum.atilanTaslar[durum.atilanTaslar.length - 1] : null;
-
-            durum.aktifOyuncuIndex = 0;
-            durum.faz = 'atma';
-            yandanAlButonGizle();
-            zamanlayiciSifirla();
-            tumEkraniGuncelle();
+            // İNSAN OYUNCU çifte ilan etmişse -> SERBESTÇE alabilir ama otomatik alamaz (Ortadan çekme hakkı da var)
+            // Sadece seçeneği göster
+            yandanAlSecenekGoster(atilanTas, atanIndex);
             return true;
         }
     }
