@@ -256,6 +256,21 @@
         if (tasIndex === -1) return;
 
         const atilanTas = ben.el.splice(tasIndex, 1)[0];
+
+        // --- İŞLEK TAŞ CEZASI (100 PUAN) ---
+        try {
+            const tümAçılmışKomblar = durum.oyuncular.flatMap(o => o.acilmisKombs);
+            const islekSonuc = GE.islerTasBelirle(atilanTas, tümAçılmışKomblar, durum.okeyTasi);
+
+            if (islekSonuc.islekMi) {
+                ben.puan += 100;
+                R.bildirimGoster(`⚠️ İŞLEK TAŞ ATTINIZ! +100 Ceza Puanı.`, 'cifte-bildirim', 4000);
+                console.log(`[PENALTY] Player threw playable tile ${atilanTas.id}, +100 pts.`);
+            }
+        } catch (err) {
+            console.error("İşlek kontrolü hatası:", err);
+        }
+
         if (durum.sonAtilanTas) durum.atilanTaslar.push(durum.sonAtilanTas);
         durum.sonAtilanTas = atilanTas;
         durum.sonTasAtanIndex = 0;
@@ -1018,7 +1033,22 @@
         if (atilacakTas) {
             const tasIdx = bot.el.findIndex(t => t.id === atilacakTas.id);
             if (tasIdx !== -1) {
-                bot.el.splice(tasIdx, 1);
+                const atilanTas = bot.el.splice(tasIdx, 1)[0];
+
+                // --- İŞLEK TAŞ CEZASI (100 PUAN) ---
+                try {
+                    const tümAçılmışKomblar = durum.oyuncular.flatMap(o => o.acilmisKombs);
+                    const islekSonuc = GE.islerTasBelirle(atilanTas, tümAçılmışKomblar, durum.okeyTasi);
+
+                    if (islekSonuc.islekMi) {
+                        bot.puan += 100;
+                        R.bildirimGoster(`⚠️ ${bot.isim} İŞLEK TAŞ ATTI! +100 Ceza Puanı.`, 'cifte-bildirim', 3000);
+                        console.log(`[PENALTY] Bot ${bot.isim} threw playable tile ${atilanTas.id}, +100 pts.`);
+                    }
+                } catch (err) {
+                    console.error("İşlek kontrolü hatası:", err);
+                }
+
                 if (durum.sonAtilanTas) durum.atilanTaslar.push(durum.sonAtilanTas);
                 durum.sonAtilanTas = atilacakTas;
                 durum.sonTasAtanIndex = botIndex;

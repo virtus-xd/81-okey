@@ -610,6 +610,22 @@ io.on('connection', (socket) => {
         if (tasIndex === -1) return;
 
         const atilanTas = oyuncu.el.splice(tasIndex, 1)[0];
+
+        // --- İŞLEK TAŞ CEZASI (100 PUAN) ---
+        try {
+            const tümAçılmışKomblar = oyun.oyuncular.flatMap(o => o.acilmisKombs);
+            const islekSonuc = GE.islerTasBelirle(atilanTas, tümAçılmışKomblar, oyun.okeyTasi);
+
+            if (islekSonuc.islekMi) {
+                oyuncu.puan += 100;
+                herkeseBildirimGonder(oyuncuOdaId,
+                    `⚠️ ${oyuncu.isim} İŞLEK TAŞ ATTI! +100 Ceza Puanı.`, 'cifte-bildirim', 4000);
+                console.log(`[PENALTY] ${oyuncu.isim} threw playable tile ${atilanTas.id}, +100 pts.`);
+            }
+        } catch (err) {
+            console.error("İşlek kontrolü hatası:", err);
+        }
+
         if (oyun.sonAtilanTas) oyun.atilanTaslar.push(oyun.sonAtilanTas);
         oyun.sonAtilanTas = atilanTas;
         oyun.sonTasAtanIndex = oyuncuIndex;
