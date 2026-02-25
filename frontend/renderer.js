@@ -8,6 +8,11 @@
 (function () {
     'use strict';
 
+    // ─── SÜRÜKLEME DURUMU (module-level) ──────────────────────────────────────────
+    // dragstart anında set edilir, dragend'de temizlenir.
+    // Böylece dragover sırasında dataTransfer.getData olmadan tile ID'ye erişilebilir.
+    let _suruklenenTasId = null;
+
     const RENK_SINIF = {
         'Kırmızı': 'kirmizi', 'kirmizi': 'kirmizi', 'Kirmizi': 'kirmizi',
         'Sarı': 'sari', 'sari': 'sari', 'Sari': 'sari',
@@ -116,14 +121,17 @@
 
                 // Drag başlangıcı
                 tasEl.addEventListener('dragstart', (e) => {
+                    _suruklenenTasId = tas.id;   // ← module state: dragover validation için
                     tasEl.classList.add('surukleniyor');
                     e.dataTransfer.setData('text/plain', JSON.stringify({ id: tas.id, slotIndex: i }));
                     e.dataTransfer.effectAllowed = 'move';
                 });
 
                 tasEl.addEventListener('dragend', () => {
+                    _suruklenenTasId = null;     // temizle
                     tasEl.classList.remove('surukleniyor');
                     document.querySelectorAll('.tas-slot.drop-hedef').forEach(el => el.classList.remove('drop-hedef'));
+                    document.querySelectorAll('.kombinasyon-grubu.isle-hedef').forEach(el => el.classList.remove('isle-hedef'));
                 });
 
                 slotEl.appendChild(tasEl);
@@ -301,7 +309,14 @@
                 grup.addEventListener('dragover', (e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
-                    grup.classList.add('isle-hedef');
+
+                    // Gerçek validasyon: blindly yeşil gösterme
+                    if (secenekler.onDragOverValidate && _suruklenenTasId !== null) {
+                        const gecerli = secenekler.onDragOverValidate(_suruklenenTasId, komb);
+                        grup.classList.toggle('isle-hedef', gecerli);
+                    } else {
+                        grup.classList.add('isle-hedef');
+                    }
                 });
 
                 grup.addEventListener('dragleave', () => {
@@ -313,11 +328,11 @@
                     grup.classList.remove('isle-hedef');
                     try {
                         const veri = JSON.parse(e.dataTransfer.getData('text/plain'));
-                        const tasIdx = veri.slotIndex; // dragstart'ta 'slotIndex' ile gönderildi
+                        const tileId = veri.id;  // ← tile ID (slot index değil!)
                         const oyuncuIdx = parseInt(grup.dataset.oyuncuIndex);
                         const kombIdx = parseInt(grup.dataset.kombIndex);
-                        if (secenekler.onTasIsleDrop && tasIdx !== undefined) {
-                            secenekler.onTasIsleDrop(tasIdx, oyuncuIdx, kombIdx);
+                        if (secenekler.onTasIsleDrop && tileId !== undefined) {
+                            secenekler.onTasIsleDrop(tileId, oyuncuIdx, kombIdx);
                         }
                     } catch (err) { /* ignore */ }
                 });

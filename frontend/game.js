@@ -138,7 +138,17 @@
         // Açılmış kombinasyonları tüm oyuncu köşelerinde ve raf üstünde göster
         // İnsan oyuncu eli açıksa ve atma fazındaysa, taş işleme drop desteği ekle
         const islemAktif = ben.elAcildi && durum.faz === 'atma' && durum.aktifOyuncuIndex === 0;
-        const isleSecenekler = islemAktif ? { onTasIsleDrop: tasIsle } : {};
+
+        function dragOverValidate(tileId, kombTaslari) {
+            const tas = ben.el.find(t => t.id === tileId);
+            if (!tas) return false;
+            const sonuc = GE.tasIslenebilirMi(tas, kombTaslari, durum.okeyTasi);
+            return sonuc.islenebilir;
+        }
+
+        const isleSecenekler = islemAktif
+            ? { onTasIsleDrop: tasIsle, onDragOverValidate: dragOverValidate }
+            : {};
 
         ['guney', 'dogu', 'kuzey', 'bati'].forEach((poz, i) => {
             const container = document.getElementById(`acilmis-${poz}`);
@@ -870,15 +880,14 @@
             return;
         }
 
+        // ── TEK DOĞRULUK KAYNAĞI: GE.tasIslenebilirMi (botlarla aynı) ──
         const kombinasyon = hedefOyuncu.acilmisKombs[kombIndex];
-        const sonuc = GE.canAddTileToMeld(tas, kombinasyon, durum.okeyTasi);
+        const sonuc = GE.tasIslenebilirMi(tas, kombinasyon, durum.okeyTasi);
 
-        if (sonuc.gecerli) {
-            // Taşı elden çıkar (ID tabanlı — sıra bağımsız)
+        if (sonuc.islenebilir) {
             ben.el = ben.el.filter(t => t.id !== tileId);
             ben.kalanTaslar = ben.el;
-            // Kombinasyonu güncelle
-            hedefOyuncu.acilmisKombs[kombIndex] = sonuc.yeniMeld;
+            hedefOyuncu.acilmisKombs[kombIndex] = sonuc.yeniKombinasyon;
             Ses.tasCek();
             R.bildirimGoster('Taş işlendi!', '', 2000);
             tumEkraniGuncelle();
