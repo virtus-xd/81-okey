@@ -46,10 +46,10 @@ const GRUP_BOYUTU = 7;
  * @returns {boolean} Taş okey mi
  */
 function okeyMi(tas, okeyTasi) {
-  if (!tas || !okeyTasi) return false;
-  // SADECE gerçek okey (gösterge + 1) wild card dır.
-  // Sahte okey (jokerMi: true) wild card DEĞİLDİR, sadece okeyin yerine geçer.
-  return !tas.jokerMi && tas.sayi === okeyTasi.sayi && tas.renk === okeyTasi.renk;
+  if (!tas) return false;
+  // Hem sahte okey hem de gerçek okey (gösterge + 1) joker sayılır
+  if (tas.jokerMi) return true;
+  return !!okeyTasi && tas.sayi === okeyTasi.sayi && tas.renk === okeyTasi.renk;
 }
 
 /**
@@ -306,8 +306,8 @@ function kombinasyonGecerliMi(taslar, okeyTasi = null) {
   const baskinRenk = grupNormalTaslar.length > 0 ? grupNormalTaslar[0].renk : (okeyTasi ? okeyTasi.renk : 'kirmizi');
 
   for (const tas of taslar) {
-    // SADECE gerçek okey wild card'dır
-    const isWildCard = !tas.jokerMi && (okeyTasi && tas.sayi === okeyTasi.sayi && tas.renk === okeyTasi.renk);
+    // Hem sahte okey hem de gerçek okey wild card (joker) olarak kabul edilir
+    const isWildCard = okeyMi(tas, okeyTasi);
 
     if (isWildCard) {
       jokerler.push(tas);
@@ -1399,51 +1399,74 @@ function slotlariGrupla(slotlar) {
  * @param {Array} slotlar - 28 elemanlı raf dizisi
  * @param {Object} okeyTasi - Okey taşı
  * @param {number} esik - El açma eşiği (puan)
+ * @param {boolean} [alreadyOpened=false] - Daha önce el açıldı mı?
+ * @param {string} [forcedMethod=null] - İlk açıştaki yöntem ('seri' veya 'cift')
  * @returns {Object|null} { yontem, kombinasyonlar, puan } veya null
  */
-function elAcmaKontrol(slotlar, okeyTasi, esik) {
+function elAcmaKontrol(slotlar, okeyTasi, esik, alreadyOpened = false, forcedMethod = null) {
   const gruplar = slotlariGrupla(slotlar);
   const gecerliKombs = [];
   let toplamPuan = 0;
 
   // 1. Seri/Per Kontrolü
-  for (const grup of gruplar) {
-    if (grup.length >= 3) {
-      const sonuc = kombinasyonGecerliMi(grup, okeyTasi);
-      if (sonuc.gecerli && (sonuc.tip === 'seri' || sonuc.tip === 'per')) {
-        gecerliKombs.push(grup);
-        const islenenGrup = _grupJokerleriniDoldur(grup, okeyTasi, sonuc.tip);
-        // Puan hesapla
-        toplamPuan += islenenGrup.reduce((t, s) => t + (s.jokerdegeri !== undefined ? s.jokerdegeri : (okeyMi(s, okeyTasi) ? 0 : s.sayi)), 0);
+  if (!alreadyOpened || forcedMethod === 'seri') {
+    for (const grup of gruplar) {
+      if (grup.length >= 3) {
+        const sonuc = kombinasyonGecerliMi(grup, okeyTasi);
+        if (sonuc.gecerli && (sonuc.tip === 'seri' || sonuc.tip === 'per')) {
+          gecerliKombs.push(grup);
+          const islenenGrup = _grupJokerleriniDoldur(grup, okeyTasi, sonuc.tip);
+          // Puan hesapla
+          toplamPuan += islenenGrup.reduce((t, s) => t + (s.jokerdegeri !== undefined ? s.jokerdegeri : (okeyMi(s, okeyTasi) ? 0 : s.sayi)), 0);
+        }
       }
     }
-  }
 
-  if (toplamPuan >= esik && gecerliKombs.length > 0) {
-    return {
-      yontem: 'seri',
-      kombinasyonlar: gecerliKombs,
-      puan: toplamPuan
-    };
+    // Eğer zaten açıksa, threshold kontrolüne gerek yok (en az bir geçerli grup yeterli)
+    if (alreadyOpened && forcedMethod === 'seri' && gecerliKombs.length > 0) {
+      return {
+        yontem: 'seri',
+        kombinasyonlar: gecerliKombs,
+        puan: toplamPuan
+      };
+    }
+
+    if (!alreadyOpened && toplamPuan >= esik && gecerliKombs.length > 0) {
+      return {
+        yontem: 'seri',
+        kombinasyonlar: gecerliKombs,
+        puan: toplamPuan
+      };
+    }
   }
 
   // 2. Çift Kontrolü
-  const ciftler = [];
-  for (const grup of gruplar) {
-    if (grup.length === 2) {
-      const sonuc = kombinasyonGecerliMi(grup, okeyTasi);
-      if (sonuc.gecerli && sonuc.tip === 'cift') {
-        ciftler.push(grup);
+  if (!alreadyOpened || forcedMethod === 'cift') {
+    const ciftler = [];
+    for (const grup of gruplar) {
+      if (grup.length === 2) {
+        const sonuc = kombinasyonGecerliMi(grup, okeyTasi);
+        if (sonuc.gecerli && sonuc.tip === 'cift') {
+          ciftler.push(grup);
+        }
       }
     }
-  }
 
-  if (ciftler.length >= 4) {
-    return {
-      yontem: 'cift',
-      kombinasyonlar: ciftler,
-      puan: 0
-    };
+    if (alreadyOpened && forcedMethod === 'cift' && ciftler.length > 0) {
+      return {
+        yontem: 'cift',
+        kombinasyonlar: ciftler,
+        puan: 0
+      };
+    }
+
+    if (!alreadyOpened && ciftler.length >= 4) {
+      return {
+        yontem: 'cift',
+        kombinasyonlar: ciftler,
+        puan: 0
+      };
+    }
   }
 
   return null;

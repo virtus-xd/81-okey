@@ -604,10 +604,10 @@
      */
     function botZorunluElAc(botIndex) {
         const bot = durum.oyuncular[botIndex];
-        if (bot.elAcildi) return; // Zaten açık
+        // Not: Zaten açıksa da yandan taş alınca yeni per oluşmuş olabilir, kontrol etmeliyiz.
 
         const esik = bot.elAcmaEsigi || GE.VARSAYILAN_ESIK;
-        let acmaSonucu = Bot.elAcmaKarari(bot.el, esik, durum.okeyTasi);
+        let acmaSonucu = Bot.elAcmaKarari(bot.el, esik, durum.okeyTasi, bot.elAcildi, bot.elAcmaYontemi);
 
         // Çifte ilan eden bot SADECE çift açabilir
         if (acmaSonucu && bot.cifteIlanEtti && acmaSonucu.yontem === 'seri') {
@@ -615,9 +615,14 @@
         }
 
         if (acmaSonucu) {
-            bot.elAcildi = true;
-            bot.acilmisKombs = acmaSonucu.kombinasyonlar;
-            bot.elAcmaYontemi = acmaSonucu.yontem;
+            const isFirstOpen = !bot.elAcildi;
+            if (isFirstOpen) {
+                bot.elAcildi = true;
+                bot.elAcmaYontemi = acmaSonucu.yontem;
+                bot.acilmisKombs = acmaSonucu.kombinasyonlar;
+            } else {
+                bot.acilmisKombs = [...bot.acilmisKombs, ...acmaSonucu.kombinasyonlar];
+            }
             const acılanIdler = new Set();
             for (const komb of acmaSonucu.kombinasyonlar) {
                 for (const tas of komb) acılanIdler.add(tas.id);
@@ -803,10 +808,10 @@
     /** Bot opsiyonel el açma denemesi (açmak zorunda değil) */
     function botElAcmaDene(botIndex) {
         const bot = durum.oyuncular[botIndex];
-        if (bot.elAcildi) return;
+        // Artık zaten açık olsa da yeni perleri açabilir
 
         const esik = bot.elAcmaEsigi || GE.VARSAYILAN_ESIK;
-        let acmaSonucu = Bot.elAcmaKarari(bot.el, esik, durum.okeyTasi);
+        let acmaSonucu = Bot.elAcmaKarari(bot.el, esik, durum.okeyTasi, bot.elAcildi, bot.elAcmaYontemi);
 
         // Çifte ilan eden bot SADECE çift açabilir
         if (acmaSonucu && bot.cifteIlanEtti && acmaSonucu.yontem === 'seri') {
@@ -814,9 +819,14 @@
         }
 
         if (acmaSonucu) {
-            bot.elAcildi = true;
-            bot.acilmisKombs = acmaSonucu.kombinasyonlar;
-            bot.elAcmaYontemi = acmaSonucu.yontem;
+            const isFirstOpen = !bot.elAcildi;
+            if (isFirstOpen) {
+                bot.elAcildi = true;
+                bot.elAcmaYontemi = acmaSonucu.yontem;
+                bot.acilmisKombs = acmaSonucu.kombinasyonlar;
+            } else {
+                bot.acilmisKombs = [...bot.acilmisKombs, ...acmaSonucu.kombinasyonlar];
+            }
             const acılanIdler = new Set();
             for (const komb of acmaSonucu.kombinasyonlar) {
                 for (const tas of komb) acılanIdler.add(tas.id);
@@ -1054,10 +1064,13 @@
         const esik = ben.elAcmaEsigi || GE.VARSAYILAN_ESIK;
 
         // FİZİKSEL DİZİLİM KONTROLÜ (Bugfix: Oyuncunun dizdiği grupları baz al)
-        const acmaSonucu = GE.elAcmaKontrol(rafSlots, durum.okeyTasi, esik);
+        const acmaSonucu = GE.elAcmaKontrol(rafSlots, durum.okeyTasi, esik, ben.elAcildi, ben.elAcmaYontemi);
 
         if (!acmaSonucu) {
-            R.bildirimGoster(`El açılamıyor. Minimum ${esik} puan ve geçerli perler gerekiyor. Gruplar arasında boşluk bıraktığınızdan emin olun.`, '', 4000);
+            const mesaj = ben.elAcildi
+                ? (ben.elAcmaYontemi === 'seri' ? 'Yeni per bulunamadı.' : 'Yeni çift bulunamadı.')
+                : `El açılamıyor. Minimum ${esik} puan ve geçerli perler gerekiyor. Gruplar arasında boşluk bıraktığınızdan emin olun.`;
+            R.bildirimGoster(mesaj, '', 4000);
             return;
         }
 
@@ -1067,8 +1080,15 @@
             return;
         }
 
-        ben.elAcildi = true;
-        ben.acilmisKombs = acmaSonucu.kombinasyonlar;
+        const isFirstOpen = !ben.elAcildi;
+        if (isFirstOpen) {
+            ben.elAcildi = true;
+            ben.elAcmaYontemi = acmaSonucu.yontem;
+            ben.acilmisKombs = acmaSonucu.kombinasyonlar;
+        } else {
+            // Zaten açıksa yeni kombinasyonları ekle
+            ben.acilmisKombs = [...ben.acilmisKombs, ...acmaSonucu.kombinasyonlar];
+        }
 
         // Zorunlu açma yerine getirildi
         durum.zorunluAcma = false;
@@ -1133,7 +1153,8 @@
                 R.sparkleEfekti('#ffd700', 40);
                 ben.puan += kafaAtma.bonus;
             } else {
-                R.bildirimGoster(`El açıldı! Toplam: ${acmaSonucu.puan} puan`, '', 3000);
+                const baslik = isFirstOpen ? 'El açıldı!' : 'Yeni perler açıldı!';
+                R.bildirimGoster(`${baslik} Toplam: ${acmaSonucu.puan} puan`, '', 3000);
             }
             zamanlayiciBaşlat();
 
@@ -1154,7 +1175,8 @@
                 R.sparkleEfekti('#ffd700', 40);
                 ben.puan += kafaAtma.bonus;
             } else {
-                R.bildirimGoster(`El açıldı! ${ciftSayisi} çift`, '', 3000);
+                const baslik = isFirstOpen ? 'El açıldı!' : 'Yeni çiftler açıldı!';
+                R.bildirimGoster(`${baslik} ${ciftSayisi} çift`, '', 3000);
             }
             zamanlayiciBaşlat();
         }

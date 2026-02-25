@@ -224,65 +224,85 @@
     }
 
     /**
-     * Bot'un el açıp açamayacağına karar verir.
-     * @param {Array} el - Bot'un eli  
-     * @param {number} esik - El açma eşiği
-     * @param {Object} okeyTasi - Okey taşı
-     * @returns {Object|null} Açılacak kombinasyonlar veya null
-     */
-    function elAcmaKarari(el, esik, okeyTasi) {
+ * Bot'un el açıp açamayacağına karar verir.
+ * @param {Array} el - Bot'un eli  
+ * @param {number} esik - El açma eşiği
+ * @param {Object} okeyTasi - Okey taşı
+ * @param {boolean} [alreadyOpened=false] - Daha önce el açıldı mı?
+ * @param {string} [forcedMethod=null] - İlk açıştaki yöntem ('seri' veya 'cift')
+ * @returns {Object|null} Açılacak kombinasyonlar veya null
+ */
+    function elAcmaKarari(el, esik, okeyTasi, alreadyOpened = false, forcedMethod = null) {
         const analiz = elAnaliz(el, okeyTasi);
 
-        // Yöntem 1: Çift açma (4+ çift)
-        if (analiz.ciftler.length >= 4) {
-            return {
-                yontem: 'cift',
-                kombinasyonlar: analiz.ciftler.slice(0, Math.min(analiz.ciftler.length, 7))
-            };
-        }
-
-        // Yöntem 2: Seri/per ile açma
-        const gecerliKombs = [];
-        let toplamPuan = 0;
-
-        // 3+ uzunluğundaki serileri ekle
-        for (const seri of analiz.seriler) {
-            if (seri.length >= 3) {
-                try {
-                    const sonuc = GE.kombinasyonGecerliMi(seri, okeyTasi);
-                    if (sonuc.gecerli) {
-                        gecerliKombs.push(seri);
-                        toplamPuan += seri.reduce((t, tas) => t + (tas.jokerMi ? 0 : tas.sayi), 0);
-                    }
-                } catch (e) { /* geçersiz, atla */ }
+        // Yöntem 1: Çift açma
+        if (!alreadyOpened || forcedMethod === 'cift') {
+            if (alreadyOpened && forcedMethod === 'cift' && analiz.ciftler.length > 0) {
+                return {
+                    yontem: 'cift',
+                    kombinasyonlar: analiz.ciftler
+                };
+            }
+            if (!alreadyOpened && analiz.ciftler.length >= 4) {
+                return {
+                    yontem: 'cift',
+                    kombinasyonlar: analiz.ciftler.slice(0, Math.min(analiz.ciftler.length, 7))
+                };
             }
         }
 
-        // 3+ uzunluğundaki perleri ekle
-        for (const per of analiz.perler) {
-            if (per.length >= 3) {
-                // Per taşları zaten seri kombinasyonlarda kullanılmış olabilir
-                const kullanilanIds = new Set();
-                for (const komb of gecerliKombs) komb.forEach(t => kullanilanIds.add(t.id));
-                const filtrelenmis = per.filter(t => !kullanilanIds.has(t.id));
-                if (filtrelenmis.length >= 3) {
+        // Yöntem 2: Seri/per ile açma
+        if (!alreadyOpened || forcedMethod === 'seri') {
+            const gecerliKombs = [];
+            let toplamPuan = 0;
+
+            // 3+ uzunluğundaki serileri ekle
+            for (const seri of analiz.seriler) {
+                if (seri.length >= 3) {
                     try {
-                        const sonuc = GE.kombinasyonGecerliMi(filtrelenmis, okeyTasi);
+                        const sonuc = GE.kombinasyonGecerliMi(seri, okeyTasi);
                         if (sonuc.gecerli) {
-                            gecerliKombs.push(filtrelenmis);
-                            toplamPuan += filtrelenmis.reduce((t, tas) => t + (tas.jokerMi ? 0 : tas.sayi), 0);
+                            gecerliKombs.push(seri);
+                            toplamPuan += seri.reduce((t, tas) => t + (tas.jokerMi ? 0 : tas.sayi), 0);
                         }
                     } catch (e) { /* geçersiz, atla */ }
                 }
             }
-        }
 
-        if (toplamPuan >= esik && gecerliKombs.length > 0) {
-            return {
-                yontem: 'seri',
-                kombinasyonlar: gecerliKombs,
-                puan: toplamPuan
-            };
+            // 3+ uzunluğundaki perleri ekle
+            for (const per of analiz.perler) {
+                if (per.length >= 3) {
+                    // Per taşları zaten seri kombinasyonlarda kullanılmış olabilir
+                    const kullanilanIds = new Set();
+                    for (const komb of gecerliKombs) komb.forEach(t => kullanilanIds.add(t.id));
+                    const filtrelenmis = per.filter(t => !kullanilanIds.has(t.id));
+                    if (filtrelenmis.length >= 3) {
+                        try {
+                            const sonuc = GE.kombinasyonGecerliMi(filtrelenmis, okeyTasi);
+                            if (sonuc.gecerli) {
+                                gecerliKombs.push(filtrelenmis);
+                                toplamPuan += filtrelenmis.reduce((t, tas) => t + (tas.jokerMi ? 0 : tas.sayi), 0);
+                            }
+                        } catch (e) { /* geçersiz, atla */ }
+                    }
+                }
+            }
+
+            if (alreadyOpened && forcedMethod === 'seri' && gecerliKombs.length > 0) {
+                return {
+                    yontem: 'seri',
+                    kombinasyonlar: gecerliKombs,
+                    puan: toplamPuan
+                };
+            }
+
+            if (!alreadyOpened && toplamPuan >= esik && gecerliKombs.length > 0) {
+                return {
+                    yontem: 'seri',
+                    kombinasyonlar: gecerliKombs,
+                    puan: toplamPuan
+                };
+            }
         }
 
         return null;
