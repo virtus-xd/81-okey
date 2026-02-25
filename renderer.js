@@ -300,7 +300,7 @@
             if (secenekler.onTasIsleDrop) {
                 grup.addEventListener('dragover', (e) => {
                     e.preventDefault();
-                    e.dataTransfer.dropEffect = 'copy';
+                    e.dataTransfer.dropEffect = 'move';
                     grup.classList.add('isle-hedef');
                 });
 
