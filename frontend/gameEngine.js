@@ -1036,20 +1036,33 @@ function islerTasBelirle(atilacakTas, kombinasyonlar, okeyTasi = null) {
     // --- SERİYE EKLENEBİLİR Mİ? ---
     const ayniRenkTaslar = normalTaslar.filter(t => t.renk === atilacakTas.renk);
     if (ayniRenkTaslar.length > 0) {
-      const sayilar = ayniRenkTaslar.map(t => t.sayi).sort((a, b) => a - b);
+      // Serinin gerçek sınırlarını (wildcard'lar dahil) hesapla
+      let wildHead = 0;
+      for (const r of kombinasyon) {
+        if (okeyMi(r, okeyTasi)) wildHead++; else break;
+      }
+      let wildTail = 0;
+      for (let i = kombinasyon.length - 1; i >= 0; i--) {
+        if (okeyMi(kombinasyon[i], okeyTasi)) wildTail++; else break;
+      }
+
+      const sayilar = normalTaslar.map(t => t.sayi).sort((a, b) => a - b);
       const enDusuk = sayilar[0];
       const enYuksek = sayilar[sayilar.length - 1];
 
+      const realStart = enDusuk - wildHead;
+      const realEnd = enYuksek + wildTail;
+
       // Serinin başına eklenebilir mi? (12-13-1 yasağı kontrolü)
-      if (atilacakTas.sayi === enDusuk - 1 && atilacakTas.sayi >= 1) {
-        if (!(enYuksek === 13 && atilacakTas.sayi === 12)) {
+      if (atilacakTas.sayi === realStart - 1 && atilacakTas.sayi >= 1) {
+        if (!(realEnd === 13 && atilacakTas.sayi === 12)) {
           return { islekMi: true, sebep: 'Mevcut bir serinin başına eklenebilir.' };
         }
       }
 
       // Serinin sonuna eklenebilir mi?
-      if (atilacakTas.sayi === enYuksek + 1 && atilacakTas.sayi <= MAKS_SAYI) {
-        if (!(atilacakTas.sayi === 1 && enYuksek === 13)) {
+      if (atilacakTas.sayi === realEnd + 1 && atilacakTas.sayi <= MAKS_SAYI) {
+        if (!(atilacakTas.sayi === 1 && realEnd === 13)) {
           return { islekMi: true, sebep: 'Mevcut bir serinin sonuna eklenebilir.' };
         }
       }
@@ -1106,18 +1119,31 @@ function tasIslenebilirMi(tas, kombinasyon, okeyTasi = null) {
   const tumAyniRenk = normalTaslar.every(t => t.renk === ilkRenk);
 
   if (tumAyniRenk && tas.renk === ilkRenk) {
+    // Serinin gerçek sınırlarını (wildcard'lar dahil) hesapla
+    let wildHead = 0;
+    for (const r of kombinasyon) {
+      if (okeyMi(r, okeyTasi)) wildHead++; else break;
+    }
+    let wildTail = 0;
+    for (let i = kombinasyon.length - 1; i >= 0; i--) {
+      if (okeyMi(kombinasyon[i], okeyTasi)) wildTail++; else break;
+    }
+
     const sayilar = normalTaslar.map(t => t.sayi).sort((a, b) => a - b);
     const enDusuk = sayilar[0];
     const enYuksek = sayilar[sayilar.length - 1];
 
+    const realStart = enDusuk - wildHead;
+    const realEnd = enYuksek + wildTail;
+
     // Serinin başına eklenebilir mi?
-    if (tas.sayi === enDusuk - 1 && tas.sayi >= 1) {
+    if (tas.sayi === realStart - 1 && tas.sayi >= 1) {
       const yeniKomb = [tas, ...kombinasyon];
       return { islenebilir: true, yeniKombinasyon: yeniKomb, sebep: 'Serinin başına eklendi.' };
     }
 
     // Serinin sonuna eklenebilir mi?
-    if (tas.sayi === enYuksek + 1 && tas.sayi <= MAKS_SAYI) {
+    if (tas.sayi === realEnd + 1 && tas.sayi <= MAKS_SAYI) {
       const yeniKomb = [...kombinasyon, tas];
       return { islenebilir: true, yeniKombinasyon: yeniKomb, sebep: 'Serinin sonuna eklendi.' };
     }
