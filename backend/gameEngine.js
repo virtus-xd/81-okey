@@ -1344,6 +1344,180 @@ function _grupJokerleriniDoldur(grup, okeyTasi, tip) {
 // MODÜL İHRACATI (EXPORT)
 // ============================================================================
 
+/**
+ * Meld içindeki taşları resolve eder — joker/wildcard'ları efektif değerlerine çevirir.
+ * Her eleman: { sayi, renk, isWild, isFakeJoker, src }
+ * @private
+ */
+function _resolveMeldTiles(meld, okeyTasi) {
+  const resolved = [];
+  for (const t of meld) {
+    const isWild = !t.jokerMi && okeyTasi &&
+      t.sayi === okeyTasi.sayi && t.renk === okeyTasi.renk;
+    if (isWild) {
+      resolved.push({ sayi: null, renk: null, isWild: true, isFakeJoker: false, src: t });
+    } else if (t.jokerMi) {
+      const efSayi = okeyTasi ? okeyTasi.sayi : 0;
+      const efRenk = okeyTasi ? okeyTasi.renk : 'joker';
+      resolved.push({ sayi: efSayi, renk: efRenk, isWild: false, isFakeJoker: true, src: t });
+    } else {
+      resolved.push({ sayi: t.sayi, renk: t.renk, isWild: false, isFakeJoker: false, src: t });
+    }
+  }
+  return resolved;
+}
+
+/**
+ * Seri genişletmeyi dener — başa veya sona.
+ * 12-13-1 geçişi her iki yönde de yasaktır.
+ * @private
+ */
+function _tryRunExtension(tile, tileIsWild, meld, meldNormals, okeyTasi) {
+  const NO = { gecerli: false, tip: null, sebep: null, yeniMeld: null };
+
+  // Sadece concrete (non-wild) taşlar
+  const concretes = meldNormals.filter(r => !r.isWild);
+  if (concretes.length === 0) return NO;
+
+  // Tüm concrete taşlar aynı renkte olmalı (seri kontrolü)
+  const runColor = concretes[0].renk;
+  if (!concretes.every(r => r.renk === runColor)) return NO;
+
+  // Duplicate sayı kontrolü (aynı renk, aynı sayı seri olamaz)
+  const concreteNums = concretes.map(r => r.sayi).sort((a, b) => a - b);
+  if (new Set(concreteNums).size !== concreteNums.length) return NO;
+
+  // Serinin gerçek extent'ini hesapla (başta ve sonta wild'lar dahil)
+  let leadingWilds = 0;
+  for (const r of meldNormals) {
+    if (r.isWild) leadingWilds++; else break;
+  }
+  let trailingWilds = 0;
+  for (let i = meldNormals.length - 1; i >= 0; i--) {
+    if (meldNormals[i].isWild) trailingWilds++; else break;
+  }
+
+  const minConcrete = concreteNums[0];
+  const maxConcrete = concreteNums[concreteNums.length - 1];
+  const runStart = minConcrete - leadingWilds;
+  const runEnd = maxConcrete + trailingWilds;
+
+  // Seri [1, 13] aralığı içinde olmalı
+  if (runStart < 1 || runEnd > MAKS_SAYI) return NO;
+
+  // ── Başa ekleme (runStart - 1) ──────────────────────────────────────────
+  const newHead = runStart - 1;
+  if (newHead >= 1) {
+    if (tileIsWild || (tile.renk === runColor && tile.sayi === newHead)) {
+      const yeniMeld = [tile, ...meld];
+      return { gecerli: true, tip: 'seri', sebep: 'Serinin başına eklendi.', yeniMeld };
+    }
+  }
+
+  // ── Sona ekleme (runEnd + 1) ─────────────────────────────────────────────
+  const newTail = runEnd + 1;
+  if (newTail <= MAKS_SAYI) {
+    if (tileIsWild || (tile.renk === runColor && tile.sayi === newTail)) {
+      const yeniMeld = [...meld, tile];
+      return { gecerli: true, tip: 'seri', sebep: 'Serinin sonuna eklendi.', yeniMeld };
+    }
+  }
+
+  return NO;
+}
+
+/**
+ * Per genişletmeyi dener — sadece 3→4 geçişine izin verir.
+ * @private
+ */
+function _tryPerExtension(tile, tileIsWild, meld, meldNormals, okeyTasi) {
+  const NO = { gecerli: false, tip: null, sebep: null, yeniMeld: null };
+
+  if (meld.length !== 3) return NO; // Yalnızca 3→4 genişlemesi
+
+  const concretes = meldNormals.filter(r => !r.isWild);
+  if (concretes.length === 0) return NO;
+
+  // Tüm concrete taşlar aynı sayıda olmalı
+  const perNum = concretes[0].sayi;
+  if (!concretes.every(r => r.sayi === perNum)) return NO; // Set değil
+
+  // Mevcut renkler (sadece gerçek taşlar; fake joker okeyTasi.renk'i claim eder)
+  const claimedColors = new Set(
+    meldNormals
+      .filter(r => !r.isWild && !r.isFakeJoker)
+      .map(r => r.renk)
+  );
+  const fakeJokerCount = meldNormals.filter(r => r.isFakeJoker).length;
+
+  if (tileIsWild) {
+    // Wildcard herhangi bir renk claim edebilir
+    if (claimedColors.size + fakeJokerCount < 4) {
+      const yeniMeld = [...meld, tile];
+      return { gecerli: true, tip: 'per', sebep: 'Per 4\'lüye tamamlandı.', yeniMeld };
+    }
+    return NO;
+  }
+
+  // Sayı eşleşmeli
+  if (tile.sayi !== perNum) return NO;
+
+  // Renk zaten mevcut olmamalı
+  if (claimedColors.has(tile.renk)) {
+    return { gecerli: false, tip: null, sebep: 'Per: Bu renk zaten mevcut.', yeniMeld: null };
+  }
+
+  const yeniMeld = [...meld, tile];
+  return { gecerli: true, tip: 'per', sebep: 'Per 4\'lüye tamamlandı.', yeniMeld };
+}
+
+/**
+ * Bir taşın mevcut açılmış bir kombinasyona eklenip eklenemeyeceğini kontrol eder.
+ *
+ * Kurallar:
+ *  - Seri: Taş başa (enDusuk-1) veya sona (enYuksek+1) eklenebilir.
+ *          12-13-1 geçişi YASAK. Wildcard (gerçek okey) da eklenebilir.
+ *  - Per:  Meld tam 3 taştan oluşmalı; eklenen taş aynı sayıda ve
+ *          meldde olmayan bir renge sahip olmalı. Maks 4 taş.
+ *  - Çift: Çift melde taş eklenemez.
+ *
+ * Bu fonksiyon eski 'tasIslenebilirMi' yerine geçer.
+ *
+ * @param {Object} tile      - Eklenecek taş (oyuncunun elinden)
+ * @param {Array}  meld      - Masadaki mevcut meld dizisi
+ * @param {Object} okeyTasi  - Okey (wildcard) taşı tanımı {sayi, renk}
+ * @returns {{ gecerli: boolean, tip: 'seri'|'per'|null, sebep: string, yeniMeld: Array|null }}
+ */
+function canAddTileToMeld(tile, meld, okeyTasi) {
+  if (!tile || !Array.isArray(meld) || meld.length < 2) {
+    return { gecerli: false, tip: null, sebep: 'Geçersiz giriş.', yeniMeld: null };
+  }
+
+  // Çift melde taş eklenemez
+  if (meld.length === 2) {
+    return { gecerli: false, tip: null, sebep: 'Çifte taş eklenemez.', yeniMeld: null };
+  }
+
+  // Wildcard (gerçek okey) tespiti
+  const tileIsWild = !tile.jokerMi && okeyTasi &&
+    tile.sayi === okeyTasi.sayi && tile.renk === okeyTasi.renk;
+
+  // Meld'i resolve et
+  const meldNormals = _resolveMeldTiles(meld, okeyTasi);
+
+  // Önce per dene (3 taşlı meld için)
+  const perResult = _tryPerExtension(tile, tileIsWild, meld, meldNormals, okeyTasi);
+  if (perResult.gecerli) return perResult;
+
+  // Sonra seri dene
+  const seriResult = _tryRunExtension(tile, tileIsWild, meld, meldNormals, okeyTasi);
+  if (seriResult.gecerli) return seriResult;
+
+  return { gecerli: false, tip: null, sebep: 'Bu taş bu komba eklenemez.', yeniMeld: null };
+}
+
+
+
 const _exports = {
   RENKLER,
   MAKS_SAYI,
@@ -1366,6 +1540,7 @@ const _exports = {
   cifteIlanEt,
   turSonuKontrol,
   islerTasBelirle,
+  canAddTileToMeld,
   tasIslenebilirMi,
   elPuaniniHesapla,
   slotlariGrupla,
