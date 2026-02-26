@@ -575,6 +575,14 @@ test('Zaten ilan etmiş → başarısız', () => {
     assert.strictEqual(sonuc.basarili, false);
 });
 
+test('Elini açmış oyuncu → başarısız', () => {
+    const oyuncu = { isim: 'Ali', elAcildi: true };
+    const oyuncular = [oyuncu, { isim: 'B' }, { isim: 'C' }, { isim: 'D' }];
+    const sonuc = cifteIlanEt(oyuncu, oyuncular);
+    assert.strictEqual(sonuc.basarili, false);
+    assert.ok(sonuc.mesaj.includes('açtığı için'));
+});
+
 test('Geçersiz liste → hata', () => {
     assert.throws(() => cifteIlanEt({ isim: 'A' }, [{ isim: 'A' }]), /Tam 4/);
 });

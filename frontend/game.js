@@ -783,13 +783,7 @@
             Ses.tasCek();
         }
 
-        // 2. El açma kontrolü
-        botElAcmaDene(botIndex);
-
-        // 3. Taş işleme denemesi (açılmış komblar varsa)
-        botTasIslemeDene(botIndex);
-
-        // 4. Çifte ilan kararı
+        // 2. Çifte ilan kararı (ÖNCE)
         if (!bot.cifteIlanEtti) {
             const cifteKarar = Bot.cifteKarari(bot.el, bot.puan, durum.okeyTasi);
             if (cifteKarar) {
@@ -804,6 +798,12 @@
                 }
             }
         }
+
+        // 3. El açma kontrolü
+        botElAcmaDene(botIndex);
+
+        // 4. Taş işleme denemesi (açılmış komblar varsa)
+        botTasIslemeDene(botIndex);
 
         // 5. Taş atma
         setTimeout(() => {

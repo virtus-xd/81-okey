@@ -304,22 +304,9 @@
     function cifteKarari(el, mevcutPuan, okeyTasi) {
         const analiz = elAnaliz(el, okeyTasi);
 
-        // Çifte gitme: El çok güçlüyse (5+ çift veya 100+ potansiyel puan)
-        if (analiz.ciftler.length >= 5) return true;
-
-        let potansiyelPuan = 0;
-        for (const seri of analiz.seriler) {
-            if (seri.length >= 3) {
-                potansiyelPuan += seri.reduce((t, tas) => t + tas.sayi, 0);
-            }
-        }
-        for (const per of analiz.perler) {
-            if (per.length >= 3) {
-                potansiyelPuan += per.reduce((t, tas) => t + tas.sayi, 0);
-            }
-        }
-
-        return potansiyelPuan >= 120;
+        // Çifte gitme: Sadece eldeki MAKSİMUM çift sayısına bakılır.
+        // Seri ve per puanıyla (potansiyelPuan) çifte gidilmez.
+        return analiz.ciftler.length >= 4;
     }
 
     /**

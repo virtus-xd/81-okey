@@ -539,6 +539,7 @@ function elPuanHesapla(kombinasyonlar) {
 
   let toplamPuan = 0;
 
+  console.log('islerTasBelirle CALL:', { atilacakTas, numKombs: kombinasyonlar.length, kombs: JSON.stringify(kombinasyonlar, null, 2) });
   for (const kombinasyon of kombinasyonlar) {
     if (!Array.isArray(kombinasyon)) {
       throw new Error('elPuanHesapla: Her kombinasyon bir dizi olmalı.');
@@ -894,14 +895,6 @@ function cifteIlanEt(oyuncu, tumOyuncular) {
     return {
       basarili: false,
       mesaj: `${oyuncu.isim} zaten çifte ilan etmiş.`,
-      guncellenenOyuncular: []
-    };
-  }
-
-  if (oyuncu.elAcildi) {
-    return {
-      basarili: false,
-      mesaj: `${oyuncu.isim} elini açtığı için çifte ilan edemez.`,
       guncellenenOyuncular: []
     };
   }
