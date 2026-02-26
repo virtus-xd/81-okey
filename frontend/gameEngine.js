@@ -1025,58 +1025,10 @@ function islerTasBelirle(atilacakTas, kombinasyonlar, okeyTasi = null) {
   for (const kombinasyon of kombinasyonlar) {
     if (!Array.isArray(kombinasyon) || kombinasyon.length === 0) continue;
 
-    // Joker (wildcard) olmayan normal taşları al ve Sahte Okeyleri çöz
-    const normalTaslar = kombinasyon.filter(t => !okeyMi(t, okeyTasi)).map(t => {
-      if (t.jokerMi) return { ...t, sayi: okeyTasi ? okeyTasi.sayi : 0, renk: okeyTasi ? okeyTasi.renk : 'joker' };
-      return t;
-    });
-
-    if (normalTaslar.length === 0) continue;
-
-    // --- SERİYE EKLENEBİLİR Mİ? ---
-    const ayniRenkTaslar = normalTaslar.filter(t => t.renk === atilacakTas.renk);
-    if (ayniRenkTaslar.length > 0) {
-      // Serinin gerçek sınırlarını (wildcard'lar dahil) hesapla
-      let wildHead = 0;
-      for (const r of kombinasyon) {
-        if (okeyMi(r, okeyTasi)) wildHead++; else break;
-      }
-      let wildTail = 0;
-      for (let i = kombinasyon.length - 1; i >= 0; i--) {
-        if (okeyMi(kombinasyon[i], okeyTasi)) wildTail++; else break;
-      }
-
-      const sayilar = normalTaslar.map(t => t.sayi).sort((a, b) => a - b);
-      const enDusuk = sayilar[0];
-      const enYuksek = sayilar[sayilar.length - 1];
-
-      const realStart = enDusuk - wildHead;
-      const realEnd = enYuksek + wildTail;
-
-      // Serinin başına eklenebilir mi? (12-13-1 yasağı kontrolü)
-      if (atilacakTas.sayi === realStart - 1 && atilacakTas.sayi >= 1) {
-        if (!(realEnd === 13 && atilacakTas.sayi === 12)) {
-          return { islekMi: true, sebep: 'Mevcut bir serinin başına eklenebilir.' };
-        }
-      }
-
-      // Serinin sonuna eklenebilir mi?
-      if (atilacakTas.sayi === realEnd + 1 && atilacakTas.sayi <= MAKS_SAYI) {
-        if (!(atilacakTas.sayi === 1 && realEnd === 13)) {
-          return { islekMi: true, sebep: 'Mevcut bir serinin sonuna eklenebilir.' };
-        }
-      }
-    }
-
-    // --- PERE EKLENEBİLİR Mİ? (3'lü → 4'lü) ---
-    if (kombinasyon.length === 3) {
-      const ilkSayi = normalTaslar[0].sayi;
-      const tumAyniSayi = normalTaslar.every(t => t.sayi === ilkSayi);
-      const renkler = new Set(normalTaslar.map(t => t.renk));
-
-      if (tumAyniSayi && atilacakTas.sayi === ilkSayi && !renkler.has(atilacakTas.renk) && renkler.size === normalTaslar.length) {
-        return { islekMi: true, sebep: 'Mevcut bir peri 4\'lüye tamamlayabilir.' };
-      }
+    // canAddTileToMeld zaten seri/per tip kontrolü yapıyor — false positive olmaz
+    const sonuc = canAddTileToMeld(atilacakTas, kombinasyon, okeyTasi);
+    if (sonuc.gecerli) {
+      return { islekMi: true, sebep: sonuc.sebep };
     }
   }
 
