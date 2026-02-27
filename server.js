@@ -962,7 +962,11 @@ io.on('connection', (socket) => {
             // Yeni state'i uygula
             oyun.oyuncular = sonuc.yeniState.oyuncular;
 
-            herkeseBildirimGonder(oyuncuOdaId, `${oyuncu.isim} taş işledi!`, '', 2000);
+            if (sonuc.okeyCalindi) {
+                herkeseBildirimGonder(oyuncuOdaId, `🎯 ${oyuncu.isim} yerdeki Okey'i çaldı!`, 'cifte-bildirim', 3000);
+            } else {
+                herkeseBildirimGonder(oyuncuOdaId, `${oyuncu.isim} taş işledi!`, '', 2000);
+            }
             herkeseDurumGonder(oyuncuOdaId);
 
             if (oyun.oyuncular[oyuncuIndex].el.length === 0) {

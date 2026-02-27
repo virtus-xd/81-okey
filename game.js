@@ -958,11 +958,20 @@
         if (sonuc.islenebilir) {
             // Taşı elden çıkar (ID tabanlı — sıra bağımsız)
             ben.el = ben.el.filter(t => t.id !== tileId);
+
+            // Eğer okey çalındıysa, okeyi ele ekle
+            if (sonuc.okeyCalindi && sonuc.calinanOkey) {
+                ben.el.push(sonuc.calinanOkey);
+                R.bildirimGoster('🎯 Yerdeki Okeyi Çaldınız!', 'cifte-bildirim', 3000);
+                R.sparkleEfekti('#fbbf24', 20);
+            } else {
+                R.bildirimGoster('Taş işlendi!', '', 2000);
+            }
+
             ben.kalanTaslar = ben.el;
             // Kombinasyonu güncelle (botlarla aynı alan: yeniKombinasyon)
             hedefOyuncu.acilmisKombs[kombIndex] = sonuc.yeniKombinasyon;
             Ses.tasCek();
-            R.bildirimGoster('Taş işlendi!', '', 2000);
             tumEkraniGuncelle();
             if (ben.el.length === 0) turSonuMu();
         } else {
@@ -1017,9 +1026,16 @@
                             const sonuc = GE.tasIslenebilirMi(tas, hedefOyuncu.acilmisKombs[ki], durum.okeyTasi);
                             if (sonuc.islenebilir) {
                                 bot.el.splice(ti, 1);
+
+                                if (sonuc.okeyCalindi && sonuc.calinanOkey) {
+                                    bot.el.push(sonuc.calinanOkey);
+                                    R.bildirimGoster(`🎯 ${bot.isim} yerdeki Okey'i çaldı!`, 'cifte-bildirim', 3000);
+                                } else {
+                                    R.bildirimGoster(`${bot.isim} taş işledi: ${sonuc.sebep}`, '', 2000);
+                                }
+
                                 hedefOyuncu.acilmisKombs[ki] = sonuc.yeniKombinasyon;
                                 bot.kalanTaslar = bot.el;
-                                R.bildirimGoster(`${bot.isim} taş işledi: ${sonuc.sebep}`, '', 2000);
                                 islemeYapildi = true;
                                 break;
                             }

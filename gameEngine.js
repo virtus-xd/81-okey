@@ -1172,6 +1172,40 @@ function _tryPerExtension(tile, tileIsWild, meld, meldNormals, okeyTasi) {
 }
 
 /**
+ * Okey taşını elindeki gerçek taşıyla değiştirmeyi dener.
+ * @private
+ */
+function _tryOkeySubstitution(tile, tileIsWild, meld, okeyTasi) {
+  const NO = { gecerli: false, tip: null, sebep: null, yeniMeld: null };
+  if (tileIsWild) return NO; // Okey ile okey çalınmaz
+
+  for (let i = 0; i < meld.length; i++) {
+    const t = meld[i];
+    const isWild = !t.jokerMi && okeyTasi &&
+      t.sayi === okeyTasi.sayi && t.renk === okeyTasi.renk;
+
+    if (isWild) {
+      // Okey bulduk, gerçek taşla yerini doldurmayı dene
+      const tempMeld = [...meld];
+      tempMeld[i] = tile;
+
+      const check = kombinasyonGecerliMi(tempMeld, okeyTasi);
+      if (check.gecerli) {
+        return {
+          gecerli: true,
+          tip: check.tip,
+          sebep: 'Yerdeki Okey çalındı!',
+          yeniMeld: tempMeld,
+          okeyCalindi: true,
+          calinanOkey: t
+        };
+      }
+    }
+  }
+  return NO;
+}
+
+/**
  * Bir taşın mevcut açılmış bir kombinasyona eklenip eklenemeyeceğini kontrol eder.
  *
  * Kurallar:
@@ -1213,6 +1247,10 @@ function canAddTileToMeld(tile, meld, okeyTasi) {
   const seriResult = _tryRunExtension(tile, tileIsWild, meld, meldNormals, okeyTasi);
   if (seriResult.gecerli) return seriResult;
 
+  // Okey çalma dene
+  const stealResult = _tryOkeySubstitution(tile, tileIsWild, meld, okeyTasi);
+  if (stealResult.gecerli) return stealResult;
+
   return { gecerli: false, tip: null, sebep: 'Bu taş bu komba eklenemez.', yeniMeld: null };
 }
 
@@ -1222,7 +1260,9 @@ function tasIslenebilirMi(tas, kombinasyon, okeyTasi = null) {
   return {
     islenebilir: sonuc.gecerli,
     yeniKombinasyon: sonuc.yeniMeld,
-    sebep: sonuc.sebep
+    sebep: sonuc.sebep,
+    okeyCalindi: sonuc.okeyCalindi || false,
+    calinanOkey: sonuc.calinanOkey || null
   };
 }
 
@@ -1286,7 +1326,14 @@ function applyAddTileToMeld(state, playerId, tileId, meldId) {
   // ── Immutable-friendly state mutasyonu ───────────────────────────────────
   const newOyuncular = state.oyuncular.map((o, i) => {
     if (i === playerId) {
-      const newEl = o.el.filter(t => t.id !== tileId);
+      // Taşı elden çıkar
+      let newEl = o.el.filter(t => t.id !== tileId);
+
+      // Eğer okey çalındıysa, okeyi ele ekle
+      if (validation.okeyCalindi && validation.calinanOkey) {
+        newEl = [...newEl, validation.calinanOkey];
+      }
+
       return { ...o, el: newEl, kalanTaslar: newEl };
     }
     if (i === ownerIndex) {
@@ -1299,7 +1346,13 @@ function applyAddTileToMeld(state, playerId, tileId, meldId) {
   });
 
   const yeniState = { ...state, oyuncular: newOyuncular };
-  return { basarili: true, hata: null, yeniState };
+  return {
+    basarili: true,
+    hata: null,
+    yeniState,
+    okeyCalindi: validation.okeyCalindi || false,
+    calinanOkey: validation.calinanOkey || null
+  };
 }
 
 /**

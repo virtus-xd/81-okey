@@ -926,6 +926,33 @@ test('Gecersiz meldId formati → basarisiz', () => {
     assert.ok(sonuc.hata.includes('meldId'));
 });
 
+test('Okey calma basarili: Okey elden cikar, gercek tas melde girer, Okey oyuncunun eline gelir', () => {
+    const okeyTasi = { sayi: 8, renk: 'kirmizi' };
+    const realTileId = 99;
+    const realTile = { id: realTileId, sayi: 4, renk: 'kirmizi', jokerMi: false };
+
+    // Okey (kirmizi 8) wildcard olarak kullaniliyor (2-3-OKEY)
+    const meld = [
+        { id: 1, sayi: 2, renk: 'kirmizi', jokerMi: false },
+        { id: 2, sayi: 3, renk: 'kirmizi', jokerMi: false },
+        { id: 3, sayi: 8, renk: 'kirmizi', jokerMi: false }
+    ];
+
+    const state = _makeTestState([realTile], meld, { okeyTasi });
+    const sonuc = applyAddTileToMeld(state, 0, realTileId, '1:0');
+
+    assert.strictEqual(sonuc.basarili, true, 'Isleme basarili olmali');
+    assert.strictEqual(sonuc.okeyCalindi, true, 'Okey calindi bayragi true olmali');
+
+    const actor = sonuc.yeniState.oyuncular[0];
+    const targetMeld = sonuc.yeniState.oyuncular[1].acilmisKombs[0];
+
+    assert.strictEqual(targetMeld[2].id, realTileId, 'Gercek tas meldde okeyin yerini almali');
+    const hasOkey = actor.el.some(t => t.id === 3);
+    assert.strictEqual(hasOkey, true, 'Calinan okey oyuncunun elinde olmali');
+    assert.strictEqual(actor.el.length, 1, 'Oyuncunun elinde 1 tas (calinan okey) olmali');
+});
+
 // ============================================================================
 // SONUÇ
 // ============================================================================
