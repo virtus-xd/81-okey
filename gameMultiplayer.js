@@ -82,8 +82,14 @@
     }
 
     function sunucuyaBaglan(isim) {
-        const sunucuUrl = window.location.origin;
-        socket = io(sunucuUrl);
+        // config.js içerisindeki sunucu URL'sini kullan
+        const sunucuUrl = window.BACKEND_URL || 'http://localhost:10000';
+
+        console.log(`📡 Sunucuya bağlanılıyor: ${sunucuUrl}...`);
+
+        socket = io(sunucuUrl, {
+            transports: ['websocket', 'polling']
+        });
 
         socket.on('connect', () => {
             console.log('🔌 Sunucuya bağlandı:', socket.id);
