@@ -1227,6 +1227,16 @@
         durum.oyunBitti = true;
         Ses.turSonu();
 
+        let okeyleBittiMi = false;
+        if (turKontrol.kazanan && durum.sonAtilanTas && durum.sonTasAtanIndex !== -1) {
+            const sonAtanOyuncu = durum.oyuncular[durum.sonTasAtanIndex];
+            if (sonAtanOyuncu.isim === turKontrol.kazanan) {
+                if (GE.okeyMi(durum.sonAtilanTas, durum.okeyTasi)) {
+                    okeyleBittiMi = true;
+                }
+            }
+        }
+
         let ozetHTML = '<table style="width:100%;border-collapse:collapse;margin-top:12px;">';
         ozetHTML += '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);"><th style="text-align:left;padding:6px;color:rgba(255,255,255,0.5);">Oyuncu</th><th style="text-align:right;padding:6px;color:rgba(255,255,255,0.5);">Ceza</th><th style="text-align:right;padding:6px;color:rgba(255,255,255,0.5);">Toplam</th></tr>';
 
@@ -1235,17 +1245,23 @@
             let aciklama = '';
 
             if (turKontrol.kazanan === oyuncu.isim) {
-                // 🚩 KAZANAN BONUSU: -100 puan
-                ceza = -100;
-                aciklama = 'Kazanan Bonusu: -100';
+                // 🚩 KAZANAN BONUSU: Normalde -100, Okey ile -200
+                ceza = okeyleBittiMi ? -200 : -100;
+                aciklama = okeyleBittiMi ? 'Okey İle Bitirme Bonusu: -200' : 'Kazanan Bonusu: -100';
             } else {
                 const cezaSonucu = GE.cezaPuanHesapla({
                     kalanTaslar: oyuncu.el,
                     elAcildi: oyuncu.elAcildi,
                     izinVermedi: oyuncu.izinVermedi
                 }, oyuncu.cifteGectiMi, durum.okeyTasi);
+
                 ceza = cezaSonucu.ceza;
                 aciklama = cezaSonucu.aciklama;
+
+                if (okeyleBittiMi && ceza > 0) {
+                    ceza *= 2;
+                    aciklama += ' (Okey bittiği için 2x)';
+                }
             }
 
             oyuncu.puan += ceza;
@@ -1261,7 +1277,9 @@
         ozetHTML += '</table>';
 
         const sebep = turKontrol.kazanan
-            ? `🏆 ${turKontrol.kazanan} tüm taşlarını açtı!`
+            ? (okeyleBittiMi
+                ? `🏆 ${turKontrol.kazanan} OKEY atarak bitirdi! Rakiplerin cezası 2'ye katlandı!`
+                : `🏆 ${turKontrol.kazanan} tüm taşlarını açtı!`)
             : '📦 Istaka tükendi!';
 
         R.modalGoster(

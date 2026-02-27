@@ -482,22 +482,42 @@ function turSonuKontrol(odaId) {
     if (turKontrol.bitti) {
         oyun.oyunBitti = true;
 
+        let okeyleBittiMi = false;
+        if (turKontrol.kazanan && oyun.sonAtilanTas && oyun.sonTasAtanIndex !== -1) {
+            const sonAtanOyuncu = oyun.oyuncular[oyun.sonTasAtanIndex];
+            if (sonAtanOyuncu.isim === turKontrol.kazanan) {
+                if (GE.okeyMi(oyun.sonAtilanTas, oyun.okeyTasi)) {
+                    okeyleBittiMi = true;
+                }
+            }
+        }
+
         // Puanları hesapla
         for (let i = 0; i < oyun.oyuncular.length; i++) {
             const o = oyun.oyuncular[i];
-            if (turKontrol.kazanan && turKontrol.kazanan.isim === o.isim) {
-                // 🚩 KAZANAN BONUSU: -100 puan
-                o.puan -= 100;
+            if (turKontrol.kazanan === o.isim) {
+                // 🚩 KAZANAN BONUSU: -100 puan, Okeyle -200
+                o.puan -= (okeyleBittiMi ? 200 : 100);
             } else {
                 const cezaObje = { kalanTaslar: o.el, elAcildi: o.elAcildi, izinVermedi: o.izinVermedi };
                 const cezaSonuc = GE.cezaPuanHesapla(cezaObje, o.cifteGectiMi, oyun.okeyTasi);
-                o.puan += cezaSonuc.ceza;
+
+                let ceza = cezaSonuc.ceza;
+                if (okeyleBittiMi && ceza > 0) {
+                    ceza *= 2;
+                }
+                o.puan += ceza;
             }
+        }
+
+        let sonSebep = turKontrol.sebep;
+        if (turKontrol.kazanan && okeyleBittiMi) {
+            sonSebep = `🏆 ${turKontrol.kazanan} OKEY atarak bitirdi! Rakiplerin cezası 2'ye katlandı!`;
         }
 
         io.to(odaId).emit('turSonu', {
             kazanan: turKontrol.kazanan,
-            sebep: turKontrol.sebep,
+            sebep: sonSebep,
             oyuncular: oyun.oyuncular.map(o => ({
                 isim: o.isim,
                 puan: o.puan,
