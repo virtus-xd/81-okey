@@ -773,6 +773,16 @@ io.on('connection', (socket) => {
         oyun.faz = 'cekme';
         oyun._turBaslangici = Date.now();
 
+        // OTOMATİK TAŞ ÇEK (Botlardaki gibi)
+        if (oyun.istaka.length > 0) {
+            const cekilenTas = oyun.istaka.pop();
+            isteyenOyuncu.el.push(cekilenTas);
+            oyun.faz = 'atma';
+
+            oyuncuyaBildirimGonder(oyuncuOdaId, oyun.izinIsteyenIndex,
+                `İzin verilmediği için otomatik taş çekildi: ${cekilenTas.jokerMi ? 'Joker ★' : cekilenTas.sayi + ' ' + cekilenTas.renk}`, '', 3500);
+        }
+
         oyunDurumuGonder(oyuncuOdaId);
     });
 
