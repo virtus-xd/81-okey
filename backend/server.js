@@ -766,7 +766,12 @@ io.on('connection', (socket) => {
         herkeseBildirimGonder(oyuncuOdaId,
             `${atanOyuncu.isim} izin vermedi — çifte geçti! Cezaları 2 katına çıkacak.`, 'cifte-bildirim', 4000);
 
-        siraIlerlet(oyuncuOdaId);
+        // İsteyenin turu atlanmaz, ortadan çekmeye mecbur kalır.
+        oyun.aktifOyuncuIndex = oyun.izinIsteyenIndex;
+        oyun.faz = 'cekme';
+        oyun._turBaslangici = Date.now();
+
+        oyunDurumuGonder(oyuncuOdaId);
     });
 
     // ═══ EL AÇ ═══

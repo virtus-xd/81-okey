@@ -552,7 +552,9 @@
                     R.bildirimGoster('İzin vermediniz — çifte geçtiniz! Cezalarınız 2 katına çıkacak.', 'cifte-bildirim', 4000);
 
                     zamanlayiciBaşlat();
-                    siraIlerlet();
+                    // Botun turu atlanmaz, ortadan çekip oynamaya devam eder.
+                    durum.faz = 'cekme';
+                    setTimeout(() => botOyna(), 800);
                     tumEkraniGuncelle();
                 }
             );
@@ -604,8 +606,15 @@
                 R.bildirimGoster(`${atan.isim} izin vermedi — çifte geçti! Cezaları 2 katına çıktı.`, 'cifte-bildirim', 3000);
 
                 setTimeout(() => {
-                    siraIlerlet();
-                    tumEkraniGuncelle();
+                    // İsteyen oyuncunun turu atlanmaz, ortadan çekmeye mecbur kalır.
+                    durum.faz = 'cekme';
+                    if (isteyen.botMu) {
+                        botOyna();
+                    } else {
+                        zamanlayiciSifirla();
+                        zamanlayiciBaşlat();
+                        tumEkraniGuncelle();
+                    }
                 }, 1000);
             }
         }
