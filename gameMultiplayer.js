@@ -349,9 +349,10 @@
         socket.emit('cifteIlan');
     }
 
-    function tasIsle(tasIndex, hedefOyuncuIndex, kombIndex) {
+    function tasIsle(tileId, hedefOyuncuIndex, kombIndex, ikincitasId) {
         if (!socket) return;
-        socket.emit('tasIsle', { tasIndex, hedefOyuncuIndex, kombIndex });
+        const meldId = `${hedefOyuncuIndex}:${kombIndex}`;
+        socket.emit('tasIsle', { tileId, tileId2: ikincitasId, meldId });
     }
 
     // ─── TAŞ TIKLANMA / SÜRÜKLEME ─────────────────────────
