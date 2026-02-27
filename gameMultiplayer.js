@@ -326,6 +326,8 @@
 
     function istakadanCek() {
         if (!socket) return;
+        const btnYandanAl = document.getElementById('btn-yandan-al');
+        if (btnYandanAl) btnYandanAl.style.display = 'none';
         socket.emit('tasCek');
     }
 
@@ -421,38 +423,25 @@
     // ─── YANDAN AL SEÇENEĞİ ────────────────────────────────
 
     function yandanAlSecenekGoster(tas, atanIsim) {
-        // Mevcut yandan al panelini kullan
-        const panel = document.getElementById('yandan-al-panel');
-        if (panel) {
-            panel.style.display = 'flex';
-            panel.innerHTML = `
-                <div class="yandan-al-icerik">
-                    <p>${atanIsim} taş attı — almak ister misiniz?</p>
-                    <div class="yandan-al-tas">${tas.jokerMi ? '★ Joker' : tas.sayi + ' ' + tas.renk}</div>
-                    <div class="yandan-al-butonlar">
-                        <button id="btn-yandan-al-evet" class="btn-aksiyon btn-onayla">✔ Al (İzin İste)</button>
-                        <button id="btn-yandan-al-pas" class="btn-aksiyon btn-reddet">✖ Pas</button>
-                    </div>
-                </div>
-            `;
+        const btn = document.getElementById('btn-yandan-al');
+        if (!btn) return;
 
-            document.getElementById('btn-yandan-al-evet').onclick = () => {
-                panel.style.display = 'none';
-                socket.emit('yandanAl');
-            };
-            document.getElementById('btn-yandan-al-pas').onclick = () => {
-                panel.style.display = 'none';
-                socket.emit('yandanAlPas');
-            };
+        btn.style.display = 'flex';
+        btn.disabled = false;
 
-            // Otomatik kapanma (8s)
-            setTimeout(() => {
-                if (panel.style.display === 'flex') {
-                    panel.style.display = 'none';
-                    socket.emit('yandanAlPas');
-                }
-            }, 7500);
-        }
+        R.bildirimGoster(`${atanIsim} taş attı — yandan alabilirsiniz!`, '', 3000);
+
+        btn.onclick = () => {
+            btn.style.display = 'none';
+            socket.emit('yandanAl');
+        };
+
+        // Otomatik gizle (8s) - Sunucu pas geçince zaten kaybolmalı ama UI güvenliği için
+        setTimeout(() => {
+            if (btn.style.display === 'flex') {
+                btn.style.display = 'none';
+            }
+        }, 8000);
     }
 
     // ─── İZİN POPUP ─────────────────────────────────────────
