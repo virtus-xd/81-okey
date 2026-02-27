@@ -964,6 +964,8 @@
                 ben.el.push(sonuc.calinanOkey);
                 R.bildirimGoster('🎯 Yerdeki Okeyi Çaldınız!', 'cifte-bildirim', 3000);
                 R.sparkleEfekti('#fbbf24', 20);
+                // El sayısı değişmese de (1 taş çıktı 1 taş girdi) rafı güncellemek zorundayız
+                _lastHandCount = -1;
             } else {
                 R.bildirimGoster('Taş işlendi!', '', 2000);
             }
