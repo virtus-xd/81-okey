@@ -318,20 +318,8 @@ function tasAtildiSonrasi(odaId, atilanTas, atanIndex) {
     oyun.izinTas = atilanTas;
     oyun.izinAtanIndex = atanIndex;
 
-    // KURAL: Eğer çifte ilan etmişse, turn progression'ı BLOKE ETME!
-    // Sadece yandanalBekleyen'i set et ve turn'ü ilerlet + Seçim Popup'ı tetikle
-    if (yandaki.cifteIlanEtti) {
-        siraIlerlet(odaId);
-        const yandakiSocket = io.sockets.sockets.get(oda.oyuncular[yandakiIndex].socketId);
-        if (yandakiSocket) {
-            yandakiSocket.emit('yandanAlSecenegi', {
-                tas: atilanTas,
-                atanIsim: oyun.oyuncular[atanIndex].isim
-            });
-        }
-        oyuncuyaBildirimGonder(odaId, yandakiIndex, "Sıra sizde! İsterseniz yandan taşı bekletmeden alabilir veya ortadan çekebilirsiniz.", 'cifte-bildirim', 4000);
-        return;
-    }
+    // SIRAYI HEMEN İLERLET! (Bekleme yapmadan botlardaki gibi akışkan)
+    siraIlerlet(odaId);
 
     const yandakiSocket = io.sockets.sockets.get(oda.oyuncular[yandakiIndex].socketId);
     if (yandakiSocket) {
@@ -339,15 +327,11 @@ function tasAtildiSonrasi(odaId, atilanTas, atanIndex) {
             tas: atilanTas,
             atanIsim: oyun.oyuncular[atanIndex].isim
         });
-    }
 
-    // 5 saniye içinde yanıt gelmezse pas geç
-    oyun._yandanAlTimeout = setTimeout(() => {
-        if (oyun.yandanAlBekleyen === yandakiIndex) {
-            oyun.yandanAlBekleyen = -1;
-            siraIlerlet(odaId);
+        if (yandaki.cifteIlanEtti) {
+            oyuncuyaBildirimGonder(odaId, yandakiIndex, "Sıra sizde! İsterseniz yandan taşı bekletmeden alabilir veya ortadan çekebilirsiniz.", 'cifte-bildirim', 4000);
         }
-    }, 8000);
+    }
 }
 
 /**
@@ -733,8 +717,8 @@ io.on('connection', (socket) => {
             oyun._yandanAlTimeout = null;
         }
         oyun.yandanAlBekleyen = -1;
-
-        siraIlerlet(oyuncuOdaId);
+        // sıra ilerletilmez, sıra zaten oyuncuda
+        herkeseDurumGonder(oyuncuOdaId);
     });
 
     // ═══ İZİN VER ═══

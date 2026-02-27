@@ -435,13 +435,6 @@
             btn.style.display = 'none';
             socket.emit('yandanAl');
         };
-
-        // Otomatik gizle (8s) - Sunucu pas geçince zaten kaybolmalı ama UI güvenliği için
-        setTimeout(() => {
-            if (btn.style.display === 'flex') {
-                btn.style.display = 'none';
-            }
-        }, 8000);
     }
 
     // ─── İZİN POPUP ─────────────────────────────────────────
