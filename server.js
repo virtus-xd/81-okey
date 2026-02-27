@@ -783,7 +783,7 @@ io.on('connection', (socket) => {
                 `İzin verilmediği için otomatik taş çekildi: ${cekilenTas.jokerMi ? 'Joker ★' : cekilenTas.sayi + ' ' + cekilenTas.renk}`, '', 3500);
         }
 
-        oyunDurumuGonder(oyuncuOdaId);
+        herkeseDurumGonder(oyuncuOdaId);
     });
 
     // ═══ EL AÇ ═══
