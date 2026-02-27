@@ -19,13 +19,10 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// Ana sayfa → multiplayer.html (static'ten ÖNCE olmalı!)
+// Ana sayfa → Sadece sunucunun çalıştığını gösteren bir mesaj (Frontend Vercel'de)
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'multiplayer.html'));
+    res.send('81 Okey Multiplayer Server is running on Render.com 🚀');
 });
-
-// Statik dosyaları sun
-app.use(express.static(path.join(__dirname)));
 
 // ─── LOBİ ve ODALAR ──────────────────────────────────────
 const odalar = new Map(); // odaId → OdaDurumu
