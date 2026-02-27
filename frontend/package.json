@@ -1,0 +1,8 @@
+{
+    "name": "81-okey-frontend",
+    "version": "1.0.0",
+    "description": "81 Okey - Vercel Frontend Build",
+    "scripts": {
+        "build": "node ../sync.js"
+    }
+}

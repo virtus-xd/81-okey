@@ -4,7 +4,7 @@
     "description": "81 Okey - Multiplayer Backend (Render.com)",
     "main": "server.js",
     "scripts": {
-        "start": "node server.js"
+        "start": "node ../sync.js && node server.js"
     },
     "dependencies": {
         "express": "^4.21.0",
